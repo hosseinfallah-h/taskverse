@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.errors import AppError
-from app.modules.users.models import User  # noqa: F401  (re-exported for router)
+from app.modules.users.models import User
 from app.modules.users.schemas import UserUpdate
 
 logger = logging.getLogger("taskverse.users")

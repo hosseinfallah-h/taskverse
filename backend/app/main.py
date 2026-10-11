@@ -4,12 +4,16 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from starlette.responses import JSONResponse
 
 from app.core import log_sink
 from app.core.config import settings
 from app.core.errors import register_error_handlers
 from app.core.logging import setup_logging
 from app.core.middleware import RequestContextMiddleware
+from app.core.rate_limit import limiter
 from app.modules.auth.router import router as auth_router
 from app.modules.health.router import router as health_router
 from app.modules.meta.router import router as meta_router
@@ -38,6 +42,17 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # --- Rate limiter ---
+    app.state.limiter = limiter
+
+    @app.exception_handler(RateLimitExceeded)
+    async def rate_limit_handler(_, exc):  # noqa: ANN001
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "rate limit exceeded", "retry_after": str(exc.detail)},
+        )
+
+    app.add_middleware(SlowAPIMiddleware)
     app.add_middleware(RequestContextMiddleware)
     app.add_middleware(
         CORSMiddleware,
@@ -45,7 +60,7 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
-        expose_headers=["X-Request-ID"],
+        expose_headers=["X-Request-ID", "Retry-After"],
     )
 
     register_error_handlers(app)
