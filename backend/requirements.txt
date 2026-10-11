@@ -1,0 +1,36 @@
+# ============ WEB FRAMEWORK ============
+fastapi==0.139.0
+uvicorn[standard]==0.49.0
+gunicorn==26.0.0
+python-multipart==0.0.32
+
+# ============ DATABASE ============
+psycopg2-binary==2.9.12
+sqlalchemy==2.0.36
+alembic==1.14.0
+
+# ============ AUTH & SECURITY ============
+python-jose[cryptography]==3.5.0
+passlib==1.7.4
+bcrypt==4.0.1
+slowapi==0.1.9
+
+# ============ CONFIG ============
+pydantic==2.10.4
+pydantic-settings==2.7.0
+python-dotenv==1.0.1
+
+# ============ HTTP ============
+httpx==0.28.1
+requests==2.32.3
+
+# ============ GRAPHQL ============
+strawberry-graphql[fastapi]==0.255.0
+
+# ============ IMAGES / FILES ============
+Pillow==12.3.0
+
+# ============ UTILITIES ============
+python-dateutil==2.9.0.post0
+pytz==2024.2
+jdatetime==5.0.0
