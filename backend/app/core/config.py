@@ -41,12 +41,12 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 90
     cors_origins: list[str] = ["http://localhost:3000"]
 
-    # SMS
-    sms_provider: str = "farazsms"
-    sms_api_base: str = "https://api.iranpayamak.com/ws/v1/sms/pattern"
+    # SMS (disabled until we own a provider)
+    sms_provider: str = ""
+    sms_api_base: str = ""
     sms_api_key: str = ""
     sms_pattern_code: str = ""
-    sms_line_number: str = "3000505"
+    sms_line_number: str = ""
     sms_otp_ttl_seconds: int = 120
     sms_otp_max_attempts: int = 5
 

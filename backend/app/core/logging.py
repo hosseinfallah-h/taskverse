@@ -60,17 +60,34 @@ def setup_logging() -> None:
         JsonFormatter() if settings.env == "production" else HumanFormatter()
     )
 
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(formatter)
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setFormatter(formatter)
 
     root = logging.getLogger()
     root.handlers.clear()
-    root.addHandler(handler)
+    root.addHandler(stdout_handler)
     root.setLevel(level)
 
-    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+    # DB sink (async) — INFO+
+    try:
+        from app.core.log_sink_handler import DbLogHandler
+
+        db_handler = DbLogHandler(level=logging.INFO)
+        db_handler.setFormatter(formatter)
+        root.addHandler(db_handler)
+    except Exception as e:  # pragma: no cover
+        logging.getLogger(__name__).warning("DB log handler not attached: %s", e)
+
+    # Quiet noisy libraries
+    for noisy in (
+        "uvicorn.access",
+        "httpcore",
+        "httpx",
+        "hpack",
+        "sqlalchemy.engine",
+    ):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
     logging.getLogger("uvicorn.error").setLevel(logging.INFO)
-    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 
 
 def get_logger(name: str, **context: Any) -> logging.LoggerAdapter:

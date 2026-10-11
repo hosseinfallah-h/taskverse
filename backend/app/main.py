@@ -5,27 +5,29 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core import log_sink
 from app.core.config import settings
 from app.core.errors import register_error_handlers
 from app.core.logging import setup_logging
 from app.core.middleware import RequestContextMiddleware
+from app.modules.auth.router import router as auth_router
 from app.modules.health.router import router as health_router
 from app.modules.meta.router import router as meta_router
+from app.modules.users.router import router as users_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup / shutdown hooks."""
     setup_logging()
     print(f"🚀 {settings.app_name} v{settings.app_version} starting...")
     print(f"   ENV: {settings.env}")
     print(f"   TZ:  {settings.timezone}")
-    yield
+    async with log_sink.lifespan_hook():
+        yield
     print(f"🛑 {settings.app_name} shutting down...")
 
 
 def create_app() -> FastAPI:
-    """Application factory."""
     app = FastAPI(
         title=settings.app_name,
         version=settings.app_version,
@@ -36,7 +38,6 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # --- Middleware (order matters) ---
     app.add_middleware(RequestContextMiddleware)
     app.add_middleware(
         CORSMiddleware,
@@ -47,12 +48,13 @@ def create_app() -> FastAPI:
         expose_headers=["X-Request-ID"],
     )
 
-    # --- Errors ---
     register_error_handlers(app)
 
     # --- Modules ---
     app.include_router(health_router)
     app.include_router(meta_router)
+    app.include_router(auth_router)
+    app.include_router(users_router)
 
     return app
 
