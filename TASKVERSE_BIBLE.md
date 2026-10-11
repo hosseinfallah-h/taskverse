@@ -165,18 +165,51 @@ Legend: **M**=Must v1.0 · **S**=Should v1.x · **C**=Could v2+
 
 ## PART G — MODULE INDEX
 
-| Module | Sprint | Status |
-|--------|--------|--------|
-| health | 0 | 🔄 building |
-| meta | 0 | 🔄 building |
-| auth | 1 | ⏳ |
-| users | 1 | ⏳ |
-| tasks | 2 | ⏳ |
-| people | 2 | ⏳ |
-| reports | 6 | ⏳ |
-| bale_bot | 3 | ⏳ |
-| ... | ... | ... |
+| Module | Sprint | Status | Notes |
+|--------|--------|--------|-------|
+| health | 0 | ✅ Live | `/`, `/health` |
+| meta | 0 | ✅ Live | `/meta/info` |
+| auth | 1 | ⏳ Planned | OTP + JWT + refresh |
+| users | 1 | ⏳ Planned | CRUD + avatars + dashboard |
+| tasks | 2 | ⏳ Planned | Core product |
+| people | 2 | ⏳ Planned | Friends + birthdays |
+| reports | 6 | ⏳ Planned | Charts + insights |
+| bale_bot | 3 | ⏳ Planned | 7AM brief + voice |
+| habits | 4 | ⏳ Planned | Streaks + XP |
+| content | 6 | ⏳ Planned | Pipeline + scheduler |
+| prompts | 6 | ⏳ Planned | AI prompt vault |
+| attachments | 5 | ⏳ Planned | Files + voice |
+| audit | 4 | ⏳ Planned | Query UI + retention |
+| admin | 8 | ⏳ Planned | Approve users + ops |
+| notifications | 3 | ⏳ Planned | Bale dispatch |
+
+## PART H — CI/CD
+
+Workflows:
+- `backend-ci.yml` — ruff + pytest + Postgres service (Python 3.11)
+- `mobile-ci.yml` — format + analyze + test (gated on pubspec.yaml)
+- `ci.yml` — path-filtered meta workflow, final gate
+
+Rules:
+- All PRs must pass CI gate before merge.
+- `main` is protected. No direct pushes (after Sprint 1).
+- Dependabot weekly for pip + actions + pub.
+
+## PART I — OBSERVABILITY
+
+**Log sinks:**
+1. stdout (structured JSON in prod, human-readable in dev)
+2. `app_logs` table (queryable; writer lands in Sprint 1)
+3. `audit_log` table (immutable; writer lands in Sprint 4)
+
+**Every request carries:**
+- `X-Request-ID` (returned to client, logged)
+- ip, user-agent captured via middleware
+
+**Retention:**
+- `app_logs`: 90 days (pruned by cron, Sprint 8)
+- `audit_log`: forever (compliance)
 
 ---
 
-**Next:** Sprint 0.5 — API contract + design system
+**Next:** Sprint 1 — Auth & Users (OTP + JWT + avatars + admin approval)

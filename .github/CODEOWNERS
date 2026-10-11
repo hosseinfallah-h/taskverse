@@ -1,0 +1,14 @@
+# Default — everything owned by the repo owner
+*                           @hosseinfallah-h
+
+# Constitution & Bible — the rules
+/TASKVERSE_CONSTITUTION.md  @hosseinfallah-h
+/TASKVERSE_BIBLE.md         @hosseinfallah-h
+
+# CI / infra
+/.github/                   @hosseinfallah-h
+/scripts/                   @hosseinfallah-h
+
+# Backend core (highest review bar)
+/backend/app/core/          @hosseinfallah-h
+/backend/migrations/        @hosseinfallah-h

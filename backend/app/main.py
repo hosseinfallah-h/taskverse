@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.errors import register_error_handlers
 from app.core.logging import setup_logging
+from app.core.middleware import RequestContextMiddleware
 from app.modules.health.router import router as health_router
 from app.modules.meta.router import router as meta_router
 
@@ -35,16 +36,18 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS
+    # --- Middleware (order matters) ---
+    app.add_middleware(RequestContextMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["X-Request-ID"],
     )
 
-    # Errors
+    # --- Errors ---
     register_error_handlers(app)
 
     # --- Modules ---
