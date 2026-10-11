@@ -1,6 +1,6 @@
 """Generic pagination helpers."""
 
-from typing import Generic, List, TypeVar
+from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
@@ -21,7 +21,7 @@ class PageParams(BaseModel):
 class Page(BaseModel, Generic[T]):
     """Generic paginated response."""
 
-    items: List[T]
+    items: list[T]
     total: int
     page: int
     size: int

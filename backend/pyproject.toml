@@ -11,10 +11,17 @@ src = ["app", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM"]
-ignore = ["E501"]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # FastAPI Depends() in default args
+    "UP038",  # isinstance tuple vs union — cosmetic
+]
 
 [tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["F401"]
+"__init__.py" = ["F401"]                     # re-exports
+"backend/scripts/*.py" = ["E402"]            # sys.path hack before import
+"scripts/*.py" = ["E402"]                    # sys.path hack before import
+"app/main.py" = ["E402"]                     # deferred imports after config
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]

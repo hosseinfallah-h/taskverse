@@ -79,3 +79,6 @@ backend/storage/backups/*
 *.db
 *.sqlite
 *.sqlite3
+
+.ruff_cache/
+ruff_cache/

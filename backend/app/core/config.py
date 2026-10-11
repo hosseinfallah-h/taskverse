@@ -2,7 +2,6 @@
 
 import json
 from functools import lru_cache
-from typing import List
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -40,7 +39,7 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_days: int = 30
     refresh_token_expire_days: int = 90
-    cors_origins: List[str] = ["http://localhost:3000"]
+    cors_origins: list[str] = ["http://localhost:3000"]
 
     # SMS
     sms_provider: str = "farazsms"
@@ -60,7 +59,7 @@ class Settings(BaseSettings):
     storage_root: str = "storage"
     attachments_dir: str = "storage/attachments"
     max_upload_mb: int = 25
-    allowed_mime_types: List[str] = [
+    allowed_mime_types: list[str] = [
         "image/jpeg",
         "image/png",
         "image/webp",

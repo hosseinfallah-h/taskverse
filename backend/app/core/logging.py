@@ -3,8 +3,8 @@
 import json
 import logging
 import sys
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from app.core.config import settings
 
@@ -14,7 +14,7 @@ class JsonFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         payload: dict[str, Any] = {
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "msg": record.getMessage(),
@@ -56,12 +56,9 @@ class HumanFormatter(logging.Formatter):
 def setup_logging() -> None:
     """Configure root logger once at startup."""
     level = logging.DEBUG if settings.debug else logging.INFO
-    formatter: logging.Formatter
-
-    if settings.env == "production":
-        formatter = JsonFormatter()
-    else:
-        formatter = HumanFormatter()
+    formatter: logging.Formatter = (
+        JsonFormatter() if settings.env == "production" else HumanFormatter()
+    )
 
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(formatter)
@@ -83,11 +80,11 @@ def get_logger(name: str, **context: Any) -> logging.LoggerAdapter:
 
 
 def log_extra(
-    request_id: Optional[str] = None,
-    user_id: Optional[int] = None,
-    module: Optional[str] = None,
-    ip: Optional[str] = None,
-    user_agent: Optional[str] = None,
+    request_id: str | None = None,
+    user_id: int | None = None,
+    module: str | None = None,
+    ip: str | None = None,
+    user_agent: str | None = None,
     **context: Any,
 ) -> dict[str, Any]:
     """Build the `extra` dict for `logger.info(..., extra=...)`."""
