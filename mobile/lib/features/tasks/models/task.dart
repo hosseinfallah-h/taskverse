@@ -52,37 +52,37 @@ class Task {
       dueDate!.isBefore(DateTime.now().subtract(const Duration(days: 1)));
 
   factory Task.fromJson(Map<String, dynamic> json) => Task(
-        id: json['id'] as int,
-        title: json['title'] as String,
-        description: json['description'] as String?,
-        projectId: json['project_id'] as int?,
-        parentId: json['parent_id'] as int?,
-        status: (json['status'] as String?) ?? 'todo',
-        priority: (json['priority'] as int?) ?? 2,
-        energy: json['energy'] as String?,
-        dueDate: json['due_date'] == null
-            ? null
-            : DateTime.parse(json['due_date'] as String),
-        dueTime: json['due_time'] as String?,
-        estimatedMin: json['estimated_min'] as int?,
-        actualMin: (json['actual_min'] as int?) ?? 0,
-        rrule: json['rrule'] as String?,
-        deferredUntil: json['deferred_until'] == null
-            ? null
-            : DateTime.parse(json['deferred_until'] as String),
-        completedAt: json['completed_at'] == null
-            ? null
-            : DateTime.parse(json['completed_at'] as String),
-        createdAt: json['created_at'] == null
-            ? DateTime.now()
-            : DateTime.parse(json['created_at'] as String),
-        sortOrder: (json['sort_order'] as int?) ?? 0,
-        tags: (json['tags'] as List<dynamic>? ?? [])
-            .map((e) => TagBrief.fromJson(e as Map<String, dynamic>))
-            .toList(),
-        subtasksCount: (json['subtasks_count'] as int?) ?? 0,
-        subtasksDone: (json['subtasks_done'] as int?) ?? 0,
-      );
+    id: json['id'] as int,
+    title: json['title'] as String,
+    description: json['description'] as String?,
+    projectId: json['project_id'] as int?,
+    parentId: json['parent_id'] as int?,
+    status: (json['status'] as String?) ?? 'todo',
+    priority: (json['priority'] as int?) ?? 2,
+    energy: json['energy'] as String?,
+    dueDate: json['due_date'] == null
+        ? null
+        : DateTime.parse(json['due_date'] as String),
+    dueTime: json['due_time'] as String?,
+    estimatedMin: json['estimated_min'] as int?,
+    actualMin: (json['actual_min'] as int?) ?? 0,
+    rrule: json['rrule'] as String?,
+    deferredUntil: json['deferred_until'] == null
+        ? null
+        : DateTime.parse(json['deferred_until'] as String),
+    completedAt: json['completed_at'] == null
+        ? null
+        : DateTime.parse(json['completed_at'] as String),
+    createdAt: json['created_at'] == null
+        ? DateTime.now()
+        : DateTime.parse(json['created_at'] as String),
+    sortOrder: (json['sort_order'] as int?) ?? 0,
+    tags: (json['tags'] as List<dynamic>? ?? [])
+        .map((e) => TagBrief.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    subtasksCount: (json['subtasks_count'] as int?) ?? 0,
+    subtasksDone: (json['subtasks_done'] as int?) ?? 0,
+  );
 }
 
 class TagBrief {
@@ -93,8 +93,32 @@ class TagBrief {
   final String? color;
 
   factory TagBrief.fromJson(Map<String, dynamic> json) => TagBrief(
-        id: json['id'] as int,
-        name: json['name'] as String,
-        color: json['color'] as String?,
-      );
+    id: json['id'] as int,
+    name: json['name'] as String,
+    color: json['color'] as String?,
+  );
+}
+
+/// Lightweight model for a subtask as returned in the task detail screen.
+class Subtask {
+  const Subtask({
+    required this.id,
+    required this.title,
+    this.status = 'todo',
+    this.priority = 2,
+  });
+
+  final int id;
+  final String title;
+  final String status;
+  final int priority;
+
+  bool get isDone => status == 'done';
+
+  factory Subtask.fromJson(Map<String, dynamic> json) => Subtask(
+    id: json['id'] as int,
+    title: json['title'] as String,
+    status: (json['status'] as String?) ?? 'todo',
+    priority: (json['priority'] as int?) ?? 2,
+  );
 }

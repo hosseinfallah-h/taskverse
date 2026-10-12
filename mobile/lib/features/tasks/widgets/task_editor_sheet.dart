@@ -13,11 +13,13 @@ import '../services/tasks_api.dart';
 
 /// Task editor bottom sheet.
 ///
-/// IMPORTANT: This widget is intentionally NOT a ConsumerWidget.
-/// It receives everything it needs via constructor args and reports
-/// back through callbacks. This avoids holding Riverpod subscriptions
-/// inside a modal route, which causes "_dependents.isEmpty" framework
-/// assertions during teardown.
+/// Architecture (chosen to avoid framework asserts during modal teardown):
+/// - NOT a ConsumerWidget. Zero Riverpod usage inside.
+/// - Uses a StatefulBuilder-based dialog for text input, with its OWN
+///   isolated state and its own NavigatorScope. Avoids nesting the sheet
+///   under the same navigator that's tearing down.
+/// - Emits onSaved at the very end; parent schedules invalidations for
+///   the next frame.
 class TaskEditorSheet extends StatefulWidget {
   const TaskEditorSheet({
     super.key,
@@ -30,17 +32,8 @@ class TaskEditorSheet extends StatefulWidget {
 
   final List<Project> initialProjects;
   final List<TagBrief> initialTags;
-
-  /// Called when user taps "+ new project". Should return the created
-  /// Project, or null on cancel/failure. The editor is expected to have
-  /// been shown a text input dialog by the caller.
   final Future<Project?> Function(String name) onCreateProject;
-
-  /// Called when user taps "+ new tag". Should return the created TagBrief,
-  /// or null on cancel/failure.
   final Future<TagBrief?> Function(String name) onCreateTag;
-
-  /// Called after a task + subtasks are successfully created.
   final VoidCallback onSaved;
 
   @override
@@ -58,7 +51,6 @@ class _TaskEditorSheetState extends State<TaskEditorSheet> {
   int? _projectId;
   List<int> _tagIds = <int>[];
 
-  /// Local mirror of projects/tags so newly-created items appear immediately.
   late List<Project> _projects;
   late List<TagBrief> _tags;
 
@@ -70,6 +62,7 @@ class _TaskEditorSheetState extends State<TaskEditorSheet> {
 
   bool _saving = false;
   bool _showAdvanced = false;
+  bool _busy = false; // guards against double-create
 
   @override
   void initState() {
@@ -89,6 +82,10 @@ class _TaskEditorSheetState extends State<TaskEditorSheet> {
     }
     super.dispose();
   }
+
+  // ---------------------------------------------------------------------------
+  // Date/time pickers (Material)
+  // ---------------------------------------------------------------------------
 
   Future<void> _pickDate() async {
     TvHaptics.tap();
@@ -115,6 +112,10 @@ class _TaskEditorSheetState extends State<TaskEditorSheet> {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Subtasks
+  // ---------------------------------------------------------------------------
+
   void _addSubtask() {
     TvHaptics.tap();
     setState(() => _subtaskControllers.add(TextEditingController()));
@@ -127,12 +128,27 @@ class _TaskEditorSheetState extends State<TaskEditorSheet> {
     setState(() {});
   }
 
-  Future<void> _handleCreateProject() async {
+  // ---------------------------------------------------------------------------
+  // Inline prompt — uses its OWN stateful widget with its OWN navigator route
+  // ---------------------------------------------------------------------------
+
+  Future<String?> _promptText({required String title, required String hint}) {
     TvHaptics.tap();
+    return showDialog<String?>(
+      context: context,
+      barrierDismissible: true,
+      useRootNavigator: true, // isolate from the sheet's route
+      builder: (_) => _NamePromptDialog(title: title, hint: hint),
+    );
+  }
+
+  Future<void> _handleCreateProject() async {
+    if (_busy) return;
     final name = await _promptText(title: 'پروژه تازه', hint: 'اسم پروژه...');
     if (!mounted) return;
     if (name == null || name.isEmpty) return;
 
+    _busy = true;
     try {
       final p = await widget.onCreateProject(name);
       if (!mounted) return;
@@ -141,13 +157,13 @@ class _TaskEditorSheetState extends State<TaskEditorSheet> {
         _projects = <Project>[..._projects, p];
         _projectId = p.id;
       });
-    } catch (_) {
-      if (mounted) _showError('خطا در ساخت پروژه');
+    } finally {
+      _busy = false;
     }
   }
 
   Future<void> _handleCreateTag() async {
-    TvHaptics.tap();
+    if (_busy) return;
     final name = await _promptText(
       title: 'برچسب تازه',
       hint: 'مثلاً: کار، خانه...',
@@ -155,6 +171,7 @@ class _TaskEditorSheetState extends State<TaskEditorSheet> {
     if (!mounted) return;
     if (name == null || name.isEmpty) return;
 
+    _busy = true;
     try {
       final t = await widget.onCreateTag(name);
       if (!mounted) return;
@@ -163,56 +180,14 @@ class _TaskEditorSheetState extends State<TaskEditorSheet> {
         _tags = <TagBrief>[..._tags, t];
         _tagIds = <int>[..._tagIds, t.id];
       });
-    } catch (_) {
-      if (mounted) _showError('خطا در ساخت برچسب');
+    } finally {
+      _busy = false;
     }
   }
 
-  /// Simple RTL-friendly text prompt. Returns the trimmed value or null.
-  Future<String?> _promptText({
-    required String title,
-    required String hint,
-  }) async {
-    final controller = TextEditingController();
-
-    final result = await showDialog<String?>(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) => AlertDialog(
-        title: Text(title, textAlign: TextAlign.right),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textDirection: TextDirection.rtl,
-          textAlign: TextAlign.right,
-          decoration: InputDecoration(hintText: hint),
-          onSubmitted: (v) {
-            final value = v.trim();
-            Navigator.of(ctx).pop<String?>(value.isEmpty ? null : value);
-          },
-        ),
-        actionsAlignment: MainAxisAlignment.spaceBetween,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop<String?>(null),
-            child: const Text('لغو'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final value = controller.text.trim();
-              Navigator.of(ctx).pop<String?>(value.isEmpty ? null : value);
-            },
-            child: const Text('ساخت'),
-          ),
-        ],
-      ),
-    );
-
-    // Give the dialog a frame to fully unwind before disposing the controller.
-    await Future<void>.delayed(Duration.zero);
-    controller.dispose();
-    return result;
-  }
+  // ---------------------------------------------------------------------------
+  // Save
+  // ---------------------------------------------------------------------------
 
   Future<void> _save() async {
     if (_title.text.trim().isEmpty) {
@@ -265,11 +240,7 @@ class _TaskEditorSheetState extends State<TaskEditorSheet> {
 
       if (!mounted) return;
       TvHaptics.celebrate();
-
-      // Tell the parent BEFORE we pop so it can schedule invalidation
-      // on the next frame, after this route has fully unwound.
       widget.onSaved();
-
       Navigator.of(context).pop();
     } catch (_) {
       if (!mounted) return;
@@ -288,6 +259,10 @@ class _TaskEditorSheetState extends State<TaskEditorSheet> {
       ),
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -552,7 +527,7 @@ class _TaskEditorSheetState extends State<TaskEditorSheet> {
   }
 
   // ---------------------------------------------------------------------------
-  // Section widgets
+  // Widgets
   // ---------------------------------------------------------------------------
 
   Widget _titleHeader(bool isDark) {
@@ -653,7 +628,7 @@ class _TaskEditorSheetState extends State<TaskEditorSheet> {
         ),
         const SizedBox(width: TvSpacing.xs),
         IconButton(
-          onPressed: _handleCreateProject,
+          onPressed: _busy ? null : _handleCreateProject,
           icon: const Icon(
             Icons.add_circle_outline_rounded,
             color: TvColors.brandPrimary,
@@ -685,7 +660,7 @@ class _TaskEditorSheetState extends State<TaskEditorSheet> {
             isDark: isDark,
           ),
         GestureDetector(
-          onTap: _handleCreateTag,
+          onTap: _busy ? null : _handleCreateTag,
           child: Container(
             padding: const EdgeInsets.symmetric(
               horizontal: TvSpacing.sm,
@@ -980,5 +955,59 @@ class _TaskEditorSheetState extends State<TaskEditorSheet> {
       final d = int.tryParse(c);
       return d == null ? c : fa[d];
     }).join();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Isolated name prompt dialog — its OWN StatefulWidget so its state is
+// disposed before the parent sheet rebuilds. No shared controllers.
+// ---------------------------------------------------------------------------
+
+class _NamePromptDialog extends StatefulWidget {
+  const _NamePromptDialog({required this.title, required this.hint});
+
+  final String title;
+  final String hint;
+
+  @override
+  State<_NamePromptDialog> createState() => _NamePromptDialogState();
+}
+
+class _NamePromptDialogState extends State<_NamePromptDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _cancel() {
+    Navigator.of(context).pop<String?>(null);
+  }
+
+  void _confirm() {
+    final value = _controller.text.trim();
+    Navigator.of(context).pop<String?>(value.isEmpty ? null : value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title, textAlign: TextAlign.right),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        textDirection: TextDirection.rtl,
+        textAlign: TextAlign.right,
+        decoration: InputDecoration(hintText: widget.hint),
+        onSubmitted: (_) => _confirm(),
+      ),
+      actionsAlignment: MainAxisAlignment.spaceBetween,
+      actions: [
+        TextButton(onPressed: _cancel, child: const Text('لغو')),
+        FilledButton(onPressed: _confirm, child: const Text('ساخت')),
+      ],
+    );
   }
 }

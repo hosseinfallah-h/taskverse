@@ -24,7 +24,8 @@ final todayTasksProvider = FutureProvider<List<Task>>((ref) async {
     if (kDebugMode) debugPrint('=== PROVIDER: got ${all.length} tasks ===');
 
     // Sort: undone first, done after
-    final sorted = [...all]..sort((a, b) {
+    final sorted = [...all]
+      ..sort((a, b) {
         if (a.isDone == b.isDone) return 0;
         return a.isDone ? 1 : -1;
       });
@@ -37,4 +38,12 @@ final todayTasksProvider = FutureProvider<List<Task>>((ref) async {
 
 final allTasksProvider = FutureProvider<List<Task>>((ref) async {
   return TasksApi.instance.list(view: 'all');
+});
+
+/// Family provider: fetches subtasks of a given parent task.
+final subtasksProvider = FutureProvider.family<List<Subtask>, int>((
+  ref,
+  parentId,
+) async {
+  return TasksApi.instance.listSubtasks(parentId);
 });

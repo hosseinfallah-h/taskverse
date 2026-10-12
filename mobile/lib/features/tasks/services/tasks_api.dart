@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_config.dart';
 import '../models/task.dart';
+import '../models/task.dart';
 
 class TasksApi {
   TasksApi._();
@@ -73,5 +74,25 @@ class TasksApi {
 
   Future<void> delete(int taskId) async {
     await _dio.delete('${ApiConfig.tasks}/$taskId');
+  }
+
+  Future<List<Subtask>> listSubtasks(int parentId) async {
+    final r = await _dio.get('${ApiConfig.tasks}/$parentId/subtasks');
+    return (r.data as List<dynamic>)
+        .map((e) => Subtask.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<Task> createSubtask({
+    required int parentId,
+    required String title,
+    int priority = 2,
+  }) async {
+    return create(title: title, parentId: parentId, priority: priority);
+  }
+
+  Future<Task> getTask(int id) async {
+    final r = await _dio.get('${ApiConfig.tasks}/$id');
+    return Task.fromJson(r.data as Map<String, dynamic>);
   }
 }
