@@ -2,30 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 
-import '../../../core/theme/colors.dart';
 import '../../../core/theme/haptics.dart';
 import '../../../core/theme/spacing.dart';
+import '../../../core/theme/theme_ext.dart';
 import '../../../core/theme/typography.dart';
 import '../../tasks/providers/tasks_provider.dart';
 
 /// Horizontal Jalali week strip. Tap a day → filters Home.
+/// Colors follow the active season via Theme.of(context).
 class WeekStrip extends ConsumerWidget {
   const WeekStrip({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final selected = ref.watch(selectedDayProvider);
 
-    // Build this week's 7 days starting from Saturday (شنبه).
     final today = DateTime.now();
     final todayStart = DateTime(today.year, today.month, today.day);
-
-    // Jalali weekday: شنبه = 0, یکشنبه = 1, ..., جمعه = 6
-    // DateTime.weekday: Mon=1, Tue=2, ..., Sat=6, Sun=7
-    // Mapping to Iranian week: Saturday first.
     final jsWeekday = _jalaliWeekdayStart(today);
-
     final weekStart = todayStart.subtract(Duration(days: jsWeekday));
     final days = List.generate(7, (i) => weekStart.add(Duration(days: i)));
 
@@ -40,7 +34,6 @@ class WeekStrip extends ConsumerWidget {
           date: days[i],
           selected: _isSameDay(days[i], selected),
           isToday: _isSameDay(days[i], todayStart),
-          isDark: isDark,
           onTap: () {
             TvHaptics.tap();
             ref.read(selectedDayProvider.notifier).state = days[i];
@@ -51,8 +44,6 @@ class WeekStrip extends ConsumerWidget {
   }
 
   static int _jalaliWeekdayStart(DateTime d) {
-    // DateTime.weekday: Mon=1 ... Sat=6, Sun=7
-    // Iranian week starts Saturday. Map: Sat(6) -> 0, Sun(7) -> 1, ..., Fri(5) -> 6
     switch (d.weekday) {
       case DateTime.saturday:
         return 0;
@@ -82,14 +73,12 @@ class _DayChip extends StatelessWidget {
     required this.date,
     required this.selected,
     required this.isToday,
-    required this.isDark,
     required this.onTap,
   });
 
   final DateTime date;
   final bool selected;
   final bool isToday;
-  final bool isDark;
   final VoidCallback onTap;
 
   static const _faWeekdays = [
@@ -104,22 +93,20 @@ class _DayChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
+    final accent = context.accent;
+    final surface = context.surface;
+    final ink = context.ink;
+    final inkSoft = context.inkSoft;
+
     final j = Jalali.fromDateTime(date);
     final weekdayIndex = WeekStrip._jalaliWeekdayStart(date);
     final weekday = _faWeekdays[weekdayIndex];
     final dayNum = _fa(j.day.toString());
 
-    final bg = selected
-        ? TvColors.brandPrimary
-        : (isDark ? TvColors.nightSoft : TvColors.paper);
-
-    final labelColor = selected
-        ? Colors.white
-        : (isDark ? TvColors.inkMuted : TvColors.inkSoft);
-
-    final numColor = selected
-        ? Colors.white
-        : (isDark ? Colors.white : TvColors.ink);
+    final bg = selected ? brand : surface;
+    final labelColor = selected ? Colors.white : inkSoft;
+    final numColor = selected ? Colors.white : ink;
 
     return GestureDetector(
       onTap: onTap,
@@ -136,18 +123,16 @@ class _DayChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(TvRadius.lg),
           border: Border.all(
             color: selected
-                ? TvColors.mint.withValues(alpha: 0.4)
+                ? accent.withValues(alpha: 0.5)
                 : (isToday
-                      ? TvColors.mint.withValues(alpha: 0.5)
-                      : (isDark
-                            ? Colors.white.withValues(alpha: 0.05)
-                            : TvColors.ink.withValues(alpha: 0.05))),
+                      ? accent.withValues(alpha: 0.6)
+                      : ink.withValues(alpha: 0.06)),
             width: isToday && !selected ? 1.5 : 1,
           ),
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: TvColors.brandPrimary.withValues(alpha: 0.30),
+                    color: brand.withValues(alpha: 0.30),
                     blurRadius: 16,
                     offset: const Offset(0, 6),
                   ),
@@ -179,7 +164,7 @@ class _DayChip extends StatelessWidget {
                 width: 5,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: selected ? TvColors.mint : TvColors.mint,
+                  color: accent,
                   shape: BoxShape.circle,
                 ),
               ),

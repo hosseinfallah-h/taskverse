@@ -97,7 +97,8 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     setState(() => _addingSubtask = true);
     try {
       await TasksApi.instance.createSubtask(parentId: _task.id, title: title);
-      await TasksApi.instance.delete(s.id);
+      _newSubtaskTitle.clear();
+      if (!mounted) return;
       ref.invalidate(subtasksProvider(_task.id));
       await _refreshTask();
       _invalidateEverything();
@@ -108,9 +109,10 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     }
   }
 
-  Future<void> _deleteSubtask(Subtask s) async {
+  Future<void> _deleteSubtask(Subtask sub) async {
     try {
-      await TasksApi.instance.delete(s.id);
+      await TasksApi.instance.delete(sub.id);
+      if (!mounted) return;
       ref.invalidate(subtasksProvider(_task.id));
       await _refreshTask();
       _invalidateEverything();

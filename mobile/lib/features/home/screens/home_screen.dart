@@ -19,7 +19,7 @@ import '../../projects/models/project.dart';
 import '../../projects/providers/projects_provider.dart';
 import '../../projects/services/projects_api.dart';
 import '../../tags/services/tags_api.dart';
-import '../../tasks/models/task.dart' show TagBrief;
+import '../../tasks/models/task.dart' show TagBrief, Task;
 import '../../tasks/providers/tasks_provider.dart';
 import '../../tasks/services/tasks_api.dart';
 import '../../tasks/widgets/task_card.dart';
@@ -1145,11 +1145,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       useRootNavigator: true,
       backgroundColor: Colors.transparent,
       builder: (_) => Container(
-        padding: const EdgeInsets.fromLTRB(
-          TvSpacing.lg,
-          TvSpacing.md,
-          TvSpacing.lg,
-          TvSpacing.xl,
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.75,
         ),
         decoration: BoxDecoration(
           color: context.surface,
@@ -1157,38 +1154,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             top: Radius.circular(TvRadius.xl),
           ),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 38,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: TvColors.inkMuted.withValues(alpha: 0.45),
-                  borderRadius: BorderRadius.circular(TvRadius.full),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              TvSpacing.lg,
+              TvSpacing.md,
+              TvSpacing.lg,
+              TvSpacing.xl,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 38,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: TvColors.inkMuted.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(TvRadius.full),
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(height: TvSpacing.lg),
+                Text(
+                  'فصل باغت',
+                  textAlign: TextAlign.right,
+                  style: TvTypography.headline.copyWith(
+                    color: context.ink,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: TvSpacing.xs),
+                Text(
+                  'رنگ‌بندی اپ با فصل عوض می‌شه',
+                  textAlign: TextAlign.right,
+                  style: TvTypography.bodySmall.copyWith(
+                    color: context.inkSoft,
+                  ),
+                ),
+                const SizedBox(height: TvSpacing.lg),
+                for (final s in TvSeason.values)
+                  _seasonTile(s, current: current),
+              ],
             ),
-            const SizedBox(height: TvSpacing.lg),
-            Text(
-              'فصل باغت',
-              textAlign: TextAlign.right,
-              style: TvTypography.headline.copyWith(
-                color: context.ink,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: TvSpacing.xs),
-            Text(
-              'رنگ‌بندی اپ با فصل عوض می‌شه',
-              textAlign: TextAlign.right,
-              style: TvTypography.bodySmall.copyWith(color: context.inkSoft),
-            ),
-            const SizedBox(height: TvSpacing.lg),
-            for (final s in TvSeason.values) _seasonTile(s, current: current),
-          ],
+          ),
         ),
       ),
     );
