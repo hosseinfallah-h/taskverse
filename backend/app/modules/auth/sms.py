@@ -34,10 +34,7 @@ async def send_otp(phone: str, code: str) -> SmsResult:
 
     if provider in ("", "disabled", "none"):
         if settings.debug:
-            logger.warning(
-                "SMS provider disabled — dev OTP issued",
-                extra={"context": {"phone": phone, "otp": code}},
-            )
+            logger.warning("DEV OTP for %s: %s", phone, code)
             return SmsResult(sent=False, dev_code=code)
         logger.error(
             "SMS provider not configured in production",
