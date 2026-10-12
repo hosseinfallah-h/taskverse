@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +12,6 @@ import '../../../shared/widgets/tv_bottom_nav.dart';
 import '../../../shared/widgets/tv_button.dart';
 import '../../../shared/widgets/tv_progress_ring.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../tasks/models/task.dart';
 import '../../tasks/providers/tasks_provider.dart';
 import '../../tasks/services/tasks_api.dart';
 import '../../tasks/widgets/task_card.dart';
@@ -27,64 +27,75 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _tab = 0;
-  int _filterIndex = 0; // 0 = all, 1 = active, 2 = done
+  int _filterIndex = 0;
+
+  static const List<String> _filters = [
+    'همه',
+    'در جریان',
+    'انجام‌شده',
+  ];
 
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authProvider);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+
     final userName = (auth.user?.name ?? '').trim();
     final firstName = userName.isEmpty
         ? 'دوست من'
         : userName.split(RegExp(r'\s+')).first;
 
-    // 60/30/10: dominant background = sand, secondary = paper cards,
-    // accent = mint/gold/mint pops.
     final background = isDark ? TvColors.night : TvColors.sand;
-    final headerHeight =
-        MediaQuery.sizeOf(context).height < 700 ? 320.0 : 360.0;
+    final screenHeight = MediaQuery.sizeOf(context).height;
 
     return Scaffold(
       backgroundColor: background,
       body: Stack(
         children: [
-          // ──── Layer 1: Gradient header (60% warm field)
+          // The green botanical atmosphere remains behind the scrolling UI.
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            height: headerHeight,
+            height: screenHeight < 700 ? 300 : 340,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                gradient: isDark
-                    ? const LinearGradient(
-                        begin: Alignment.topRight,
-                        end: Alignment.bottomLeft,
-                        colors: [TvColors.nightSoft, TvColors.night],
-                      )
-                    : TvColors.dawnGradient,
+                gradient: LinearGradient(
+                  begin: Alignment.topRight,
+                  end: Alignment.bottomLeft,
+                  colors: isDark
+                      ? const [
+                          TvColors.brandPrimaryDeep,
+                          TvColors.night,
+                        ]
+                      : const [
+                          TvColors.brandPrimary,
+                          TvColors.brandPrimaryDeep,
+                        ],
+                ),
                 borderRadius: const BorderRadiusDirectional.only(
-                  bottomStart: Radius.circular(40),
-                  bottomEnd: Radius.circular(40),
+                  bottomStart: Radius.circular(36),
+                  bottomEnd: Radius.circular(36),
                 ),
               ),
             ),
           ),
 
-          // ──── Layer 2: Soft accent glow (depth)
           Positioned(
-            top: -80,
-            right: -60,
+            top: -100,
+            right: -80,
             child: IgnorePointer(
               child: Container(
-                width: 260,
-                height: 260,
+                width: 280,
+                height: 280,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      TvColors.mint.withValues(alpha: isDark ? 0.10 : 0.22),
+                      TvColors.mint.withValues(
+                        alpha: isDark ? 0.14 : 0.20,
+                      ),
                       TvColors.mint.withValues(alpha: 0),
                     ],
                   ),
@@ -93,22 +104,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
 
-          // ──── Layer 3: Content
           SafeArea(
             bottom: false,
             child: RefreshIndicator(
               color: TvColors.brandPrimary,
               backgroundColor:
                   isDark ? TvColors.nightSoft : TvColors.paper,
-              strokeWidth: 2.5,
-              onRefresh: () async {
-                TvHaptics.tap();
-                ref.invalidate(todayTasksProvider);
-                ref.invalidate(allTasksProvider);
-                await Future<void>.delayed(
-                  const Duration(milliseconds: 400),
-                );
-              },
+              onRefresh: _refreshDashboard,
               child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(
                   parent: BouncingScrollPhysics(),
@@ -117,169 +119,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(
                       TvSpacing.md,
-                      TvSpacing.md,
+                      TvSpacing.sm,
                       TvSpacing.md,
                       0,
                     ),
                     sliver: SliverList(
-                      delegate: SliverChildListDelegate([
-                        _header(firstName, isDark),
-                        const SizedBox(height: TvSpacing.lg),
-                        _heroCard(isDark),
-                        const SizedBox(height: TvSpacing.lg),
-                        _sectionRow(
-                          title: 'امروز',
-                          subtitle: 'کارهای امروزت',
-                          isDark: isDark,
-                        ),
-                        const SizedBox(height: TvSpacing.sm),
-                        _filterRow(isDark),
-                        const SizedBox(height: TvSpacing.sm),
-                        _taskList(isDark),
-                        const SizedBox(height: 140),
-                      ]),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // ──── Layer 4: Floating pill nav
-          Positioned(
-            left: TvSpacing.md,
-            right: TvSpacing.md,
-            bottom: TvSpacing.md,
-            child: TvBottomNav(
-              currentIndex: _tab,
-              onTap: (index) {
-                if (index == _tab) return;
-                TvHaptics.tap();
-                setState(() => _tab = index);
-              },
-              onFabTap: _openEditor,
-            )
-                .animate()
-                .fadeIn(duration: 500.ms)
-                .slideY(
-                  begin: 0.25,
-                  end: 0,
-                  duration: 500.ms,
-                  curve: Curves.easeOutCubic,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ────────────────────────────────────────────────────────
-  // Header
-  // ────────────────────────────────────────────────────────
-
-  Widget _header(String firstName, bool isDark) {
-    final muted = isDark ? TvColors.inkMuted : TvColors.inkSoft;
-
-    return Row(
-      children: [
-        // Avatar with ring
-        Container(
-          width: 54,
-          height: 54,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: isDark
-                ? const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      TvColors.brandPrimary,
-                      TvColors.brandPrimaryDeep,
-                    ],
-                  )
-                : const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Colors.white, TvColors.brandPrimarySoft],
-                  ),
-            border: Border.all(
-              color: TvColors.mint.withValues(alpha: 0.4),
-              width: 2,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: TvColors.mint.withValues(alpha: 0.20),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Center(
-            child: Text(
-              firstName.characters.first,
-              style: TvTypography.title.copyWith(
-                color: isDark ? Colors.white : TvColors.brandPrimary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: TvSpacing.sm),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _greetingByTime(),
-                style: TvTypography.caption.copyWith(
-                  color: muted,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                firstName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TvTypography.title.copyWith(
-                  color: isDark ? Colors.white : TvColors.ink,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Material(
-          color: isDark ? TvColors.nightElevated : Colors.white,
-          shape: const CircleBorder(),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: () => TvHaptics.tap(),
-            child: SizedBox(
-              width: 46,
-              height: 46,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Icon(
-                    Icons.notifications_none_rounded,
-                    size: 24,
-                    color: muted,
-                  ),
-                  Positioned(
-                    top: 11,
-                    right: 12,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: TvColors.rose,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: TvColors.rose.withValues(alpha: 0.5),
-                            blurRadius: 6,
-                          ),
+                      delegate: SliverChildListDelegate(
+                        [
+                          _buildHeader(firstName, isDark),
+                          const SizedBox(height: TvSpacing.lg),
+                          _buildProgressCard(isDark),
+                          const SizedBox(height: TvSpacing.xl),
+                          _buildTaskSectionHeading(isDark),
+                          const SizedBox(height: TvSpacing.md),
+                          _buildFilters(isDark),
+                          const SizedBox(height: TvSpacing.md),
+                          _buildTaskList(isDark),
+                          const SizedBox(height: 150),
                         ],
                       ),
                     ),
@@ -288,130 +144,279 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
           ),
+
+          Positioned(
+            left: TvSpacing.md,
+            right: TvSpacing.md,
+            bottom: TvSpacing.md,
+            child: TvBottomNav(
+              currentIndex: _tab,
+              onTap: (index) {
+                if (index == _tab) return;
+
+                TvHaptics.tap();
+                setState(() => _tab = index);
+              },
+              onFabTap: _openEditor,
+            )
+                .animate()
+                .fadeIn(duration: 450.ms)
+                .slideY(
+                  begin: 0.18,
+                  end: 0,
+                  duration: 450.ms,
+                  curve: Curves.easeOutCubic,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _refreshDashboard() async {
+    TvHaptics.tap();
+    ref.invalidate(todayTasksProvider);
+    ref.invalidate(allTasksProvider);
+
+    // Give the providers time to refresh without blocking the UI.
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Welcome header
+  // ---------------------------------------------------------------------------
+
+  Widget _buildHeader(String firstName, bool isDark) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _greetingIcon(),
+                    size: 17,
+                    color: TvColors.mint,
+                  ),
+                  const SizedBox(width: TvSpacing.xs),
+                  Text(
+                    _greetingByTime(),
+                    style: TvTypography.bodySmall.copyWith(
+                      color: Colors.white.withValues(alpha: 0.76),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: TvSpacing.xs),
+              Text(
+                firstName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TvTypography.headline.copyWith(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: TvSpacing.xs),
+              Text(
+                'هر قدم کوچیک، یک رشد بزرگه.',
+                style: TvTypography.bodySmall.copyWith(
+                  color: Colors.white.withValues(alpha: 0.78),
+                  height: 1.6,
+                ),
+              ),
+            ],
+          ),
         ),
+        const SizedBox(width: TvSpacing.md),
+        _buildGardenMark(),
       ],
     )
         .animate()
         .fadeIn(duration: 400.ms)
-        .slideX(begin: -0.035, end: 0, duration: 400.ms);
+        .slideX(
+          begin: -0.025,
+          end: 0,
+          duration: 400.ms,
+          curve: Curves.easeOutCubic,
+        );
+  }
+
+  Widget _buildGardenMark() {
+    return Semantics(
+      image: true,
+      label: 'نشان باغ کار',
+      child: Container(
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.18),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Positioned(
+              top: 9,
+              right: 10,
+              child: Container(
+                width: 6,
+                height: 6,
+                decoration: const BoxDecoration(
+                  color: TvColors.sunGold,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            const Icon(
+              Icons.spa_rounded,
+              size: 31,
+              color: TvColors.mint,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _greetingIcon() {
+    final hour = DateTime.now().hour;
+
+    if (hour < 12) return Icons.wb_sunny_outlined;
+    if (hour < 17) return Icons.wb_sunny_rounded;
+    if (hour < 20) return Icons.wb_twilight_rounded;
+
+    return Icons.nightlight_round;
   }
 
   String _greetingByTime() {
-    final h = DateTime.now().hour;
-    if (h < 12) return 'صبح بخیر';
-    if (h < 17) return 'ظهر بخیر';
-    if (h < 20) return 'عصر بخیر';
+    final hour = DateTime.now().hour;
+
+    if (hour < 12) return 'صبح بخیر';
+    if (hour < 17) return 'ظهر بخیر';
+    if (hour < 20) return 'عصر بخیر';
+
     return 'شب بخیر';
   }
 
-  // ────────────────────────────────────────────────────────
-  // Hero card (ring + stats) — WITH DEPTH
-  // ────────────────────────────────────────────────────────
+  // ---------------------------------------------------------------------------
+  // Progress overview
+  // ---------------------------------------------------------------------------
 
-  Widget _heroCard(bool isDark) {
-    final p = ref.watch(progressProvider);
-    final cardColor = isDark ? TvColors.nightSoft : TvColors.paper;
+  Widget _buildProgressCard(bool isDark) {
+    final progress = ref.watch(progressProvider);
+    final textColor = isDark ? Colors.white : TvColors.ink;
+    final mutedColor = isDark ? TvColors.inkMuted : TvColors.inkSoft;
 
     return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(TvSpacing.lg),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(TvRadius.xl + 4),
-        boxShadow: isDark
-            ? null
-            : [
-                // Layered depth: soft brand glow + tight edge
-                BoxShadow(
-                  color: TvColors.brandPrimary.withValues(alpha: 0.10),
-                  blurRadius: 40,
-                  offset: const Offset(0, 16),
-                ),
-                BoxShadow(
-                  color: TvColors.brandPrimary.withValues(alpha: 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(TvSpacing.lg),
-        decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(TvRadius.xl + 4),
-          border: Border.all(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.05)
-                : TvColors.brandPrimary.withValues(alpha: 0.08),
-            width: 1,
-          ),
-          // Inner subtle gradient for depth
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isDark
-                ? [
-                    TvColors.nightSoft,
-                    TvColors.nightSoft.withValues(alpha: 0.85),
-                  ]
-                : [
-                    TvColors.paper,
-                    TvColors.paper.withValues(alpha: 0.92),
-                  ],
-          ),
+        color: isDark ? TvColors.nightSoft : TvColors.paper,
+        borderRadius: BorderRadius.circular(TvRadius.xl + 2),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.07)
+              : TvColors.brandPrimary.withValues(alpha: 0.09),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Rank chip top-right
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: TvSpacing.sm,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Color(p.rankColor).withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(TvRadius.full),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        p.rankEmoji,
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        p.rankName,
-                        style: TvTypography.caption.copyWith(
-                          color: Color(p.rankColor),
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  'سطح ${_fa(p.level.toString())}',
-                  style: TvTypography.caption.copyWith(
-                    color: isDark ? TvColors.inkMuted : TvColors.inkSoft,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
+        boxShadow: [
+          BoxShadow(
+            color: TvColors.brandPrimary.withValues(
+              alpha: isDark ? 0.08 : 0.09,
             ),
-            const SizedBox(height: TvSpacing.md),
+            blurRadius: 32,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'باغت چطور پیش می‌ره؟',
+                      style: TvTypography.title.copyWith(
+                        color: textColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: TvSpacing.xxs),
+                    Text(
+                      'رشدت رو قدم‌به‌قدم دنبال کن',
+                      style: TvTypography.caption.copyWith(
+                        color: mutedColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: TvSpacing.sm,
+                  vertical: TvSpacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: TvColors.mint.withValues(
+                    alpha: isDark ? 0.13 : 0.18,
+                  ),
+                  borderRadius: BorderRadius.circular(TvRadius.full),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.eco_rounded,
+                      color: TvColors.brandPrimary,
+                      size: 16,
+                    ),
+                    const SizedBox(width: TvSpacing.xxs),
+                    Text(
+                      'سطح ${_fa(progress.level.toString())}',
+                      style: TvTypography.caption.copyWith(
+                        color: TvColors.brandPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: TvSpacing.lg),
 
-            // Ring + side stats
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                TvProgressRing(
-                  todayRatio: p.todayRatio,
-                  weekRatio: p.weekRatio,
-                  size: 130,
-                  innerStroke: 9,
-                  outerStroke: 6,
+          // Progress ring and the daily/weekly summaries.
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 340;
+
+              final ring = Center(
+                child: TvProgressRing(
+                  todayRatio: progress.todayRatio,
+                  weekRatio: progress.weekRatio,
+                  size: compact ? 112 : 124,
+                  innerStroke: 8,
+                  outerStroke: 5,
                   innerTrack: isDark
                       ? TvColors.nightElevated
                       : TvColors.brandPrimarySoft,
@@ -419,144 +424,151 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ? TvColors.nightElevated
                       : TvColors.sunGoldSoft,
                 ),
-                const SizedBox(width: TvSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _ringLegend(
-                        color: TvColors.mint,
-                        label: 'امروز',
-                        value: '${_fa(p.todayDone.toString())} از ${_fa(p.todayTotal.toString())}',
-                        isDark: isDark,
-                      ),
-                      const SizedBox(height: TvSpacing.sm),
-                      _ringLegend(
-                        color: TvColors.sunGold,
-                        label: 'این هفته',
-                        value: '${_fa(p.weekDone.toString())} از ${_fa(p.weekTotal.toString())}',
-                        isDark: isDark,
-                      ),
-                      const SizedBox(height: TvSpacing.md),
-                      // XP bar
-                      Text(
-                        'XP ${_fa(p.xp.toString())}',
-                        style: TvTypography.caption.copyWith(
-                          color: isDark ? TvColors.inkMuted : TvColors.inkSoft,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      ClipRRect(
-                        borderRadius:
-                            BorderRadius.circular(TvRadius.full),
-                        child: TweenAnimationBuilder<double>(
-                          tween: Tween(begin: 0, end: p.levelProgress),
-                          duration: const Duration(milliseconds: 900),
-                          curve: Curves.easeOutCubic,
-                          builder: (_, v, __) => LinearProgressIndicator(
-                            value: v,
-                            minHeight: 6,
-                            backgroundColor: isDark
-                                ? TvColors.nightElevated
-                                : TvColors.brandPrimarySoft
-                                    .withValues(alpha: 0.5),
-                            valueColor: AlwaysStoppedAnimation(
-                              TvColors.mint,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: TvSpacing.lg),
+              );
 
-            // Stats row
-            Container(
-              height: 1,
-              color: (isDark ? Colors.white : TvColors.ink)
-                  .withValues(alpha: 0.06),
-            ),
-            const SizedBox(height: TvSpacing.md),
-            Row(
-              children: [
-                Expanded(
-                  child: _statPill(
-                    icon: Icons.eco_rounded,
-                    value: _fa(p.sprouts.toString()),
-                    label: 'جوانه‌ها',
-                    tint: TvColors.mint,
+              final details = Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildProgressLegend(
+                    color: TvColors.mint,
+                    label: 'امروز',
+                    value:
+                        '${_fa(progress.todayDone.toString())} از ${_fa(progress.todayTotal.toString())}',
                     isDark: isDark,
                   ),
-                ),
-                _vDivider(isDark),
-                Expanded(
-                  child: _statPill(
-                    icon: Icons.local_fire_department_rounded,
-                    value: _fa(p.streak.toString()),
-                    label: 'روزهای متوالی',
-                    tint: TvColors.sunGold,
+                  const SizedBox(height: TvSpacing.md),
+                  _buildProgressLegend(
+                    color: TvColors.sunGold,
+                    label: 'این هفته',
+                    value:
+                        '${_fa(progress.weekDone.toString())} از ${_fa(progress.weekTotal.toString())}',
                     isDark: isDark,
                   ),
-                ),
-                _vDivider(isDark),
-                Expanded(
-                  child: _statPill(
-                    icon: Icons.check_circle_rounded,
-                    value: _fa(p.todayDone.toString()),
-                    label: 'انجام امروز',
-                    tint: TvColors.sky,
+                  const SizedBox(height: TvSpacing.lg),
+                  _buildXpProgress(
+                    xp: progress.xp,
+                    levelProgress: progress.levelProgress,
                     isDark: isDark,
                   ),
+                ],
+              );
+
+              if (compact) {
+                return Column(
+                  children: [
+                    ring,
+                    const SizedBox(height: TvSpacing.lg),
+                    details,
+                  ],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(width: 124, child: ring),
+                  const SizedBox(width: TvSpacing.lg),
+                  Expanded(child: details),
+                ],
+              );
+            },
+          ),
+
+          const SizedBox(height: TvSpacing.lg),
+          Container(
+            height: 1,
+            color: (isDark ? Colors.white : TvColors.ink)
+                .withValues(alpha: 0.08),
+          ),
+          const SizedBox(height: TvSpacing.md),
+
+          // Three compact metrics with consistent alignment.
+          Row(
+            children: [
+              Expanded(
+                child: _buildStat(
+                  icon: Icons.eco_rounded,
+                  value: _fa(progress.sprouts.toString()),
+                  label: 'جوانه‌ها',
+                  tint: TvColors.mint,
+                  isDark: isDark,
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+              _buildStatDivider(isDark),
+              Expanded(
+                child: _buildStat(
+                  icon: Icons.local_fire_department_rounded,
+                  value: _fa(progress.streak.toString()),
+                  label: 'روز متوالی',
+                  tint: TvColors.sunGold,
+                  isDark: isDark,
+                ),
+              ),
+              _buildStatDivider(isDark),
+              Expanded(
+                child: _buildStat(
+                  icon: Icons.check_circle_outline_rounded,
+                  value: _fa(progress.todayDone.toString()),
+                  label: 'انجام امروز',
+                  tint: TvColors.sky,
+                  isDark: isDark,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     )
         .animate()
-        .fadeIn(duration: 500.ms, delay: 100.ms)
-        .slideY(begin: 0.05, end: 0, duration: 500.ms);
+        .fadeIn(duration: 500.ms, delay: 80.ms)
+        .slideY(
+          begin: 0.035,
+          end: 0,
+          duration: 500.ms,
+          curve: Curves.easeOutCubic,
+        );
   }
 
-  Widget _ringLegend({
+  Widget _buildProgressLegend({
     required Color color,
     required String label,
     required String value,
     required bool isDark,
   }) {
+    final mutedColor = isDark ? TvColors.inkMuted : TvColors.inkSoft;
+    final textColor = isDark ? Colors.white : TvColors.ink;
+
     return Row(
       children: [
         Container(
-          width: 8,
-          height: 8,
+          width: 9,
+          height: 9,
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: color.withValues(alpha: 0.4),
-                blurRadius: 6,
+                color: color.withValues(alpha: 0.25),
+                blurRadius: 7,
               ),
             ],
           ),
         ),
         const SizedBox(width: TvSpacing.xs),
-        Text(
-          label,
-          style: TvTypography.caption.copyWith(
-            color: isDark ? TvColors.inkMuted : TvColors.inkSoft,
+        Expanded(
+          child: Text(
+            label,
+            style: TvTypography.bodySmall.copyWith(
+              color: mutedColor,
+            ),
           ),
         ),
-        const Spacer(),
+        const SizedBox(width: TvSpacing.xs),
         Text(
           value,
-          style: TvTypography.caption.copyWith(
-            color: isDark ? Colors.white : TvColors.ink,
+          textDirection: TextDirection.rtl,
+          style: TvTypography.label.copyWith(
+            color: textColor,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -564,7 +576,70 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _statPill({
+  Widget _buildXpProgress({
+    required int xp,
+    required double levelProgress,
+    required bool isDark,
+  }) {
+    final mutedColor = isDark ? TvColors.inkMuted : TvColors.inkSoft;
+    final progressValue = levelProgress.clamp(0.0, 1.0).toDouble();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.bolt_rounded,
+              size: 17,
+              color: TvColors.sunGold,
+            ),
+            const SizedBox(width: TvSpacing.xxs),
+            Text(
+              'امتیاز تجربه',
+              style: TvTypography.caption.copyWith(
+                color: mutedColor,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              _fa(xp.toString()),
+              style: TvTypography.label.copyWith(
+                color: isDark ? Colors.white : TvColors.ink,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: TvSpacing.xs),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(TvRadius.full),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween<double>(
+              begin: 0,
+              end: progressValue,
+            ),
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, child) {
+              return LinearProgressIndicator(
+                value: value,
+                minHeight: 7,
+                backgroundColor: isDark
+                    ? TvColors.nightElevated
+                    : TvColors.brandPrimarySoft.withValues(alpha: 0.65),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  TvColors.mint,
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStat({
     required IconData icon,
     required String value,
     required String label,
@@ -573,8 +648,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }) {
     return Column(
       children: [
-        Icon(icon, color: tint, size: 20),
-        const SizedBox(height: TvSpacing.xxs),
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: tint.withValues(alpha: isDark ? 0.12 : 0.17),
+            borderRadius: BorderRadius.circular(13),
+          ),
+          child: Icon(
+            icon,
+            size: 19,
+            color: tint,
+          ),
+        ),
+        const SizedBox(height: TvSpacing.xs),
         Text(
           value,
           style: TvTypography.numericSmall.copyWith(
@@ -585,202 +672,238 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         Text(
           label,
           textAlign: TextAlign.center,
-          maxLines: 1,
+          maxLines: 2,
           style: TvTypography.caption.copyWith(
             color: isDark ? TvColors.inkMuted : TvColors.inkSoft,
-            fontSize: 10,
+            height: 1.4,
           ),
         ),
       ],
     );
   }
 
-  Widget _vDivider(bool isDark) {
+  Widget _buildStatDivider(bool isDark) {
     return Container(
       width: 1,
-      height: 40,
+      height: 52,
       margin: const EdgeInsets.symmetric(horizontal: TvSpacing.xs),
-      color: (isDark ? Colors.white : TvColors.ink).withValues(alpha: 0.06),
+      color: (isDark ? Colors.white : TvColors.ink)
+          .withValues(alpha: 0.08),
     );
   }
 
-  // ────────────────────────────────────────────────────────
-  // Section row + filter
-  // ────────────────────────────────────────────────────────
+  // ---------------------------------------------------------------------------
+  // Today's tasks
+  // ---------------------------------------------------------------------------
 
-  Widget _sectionRow({
-    required String title,
-    required String subtitle,
-    required bool isDark,
-  }) {
+  Widget _buildTaskSectionHeading(bool isDark) {
+    final textColor = isDark ? Colors.white : TvColors.ink;
+    final mutedColor = isDark ? TvColors.inkMuted : TvColors.inkSoft;
+
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                title,
+                'کارهای امروز',
                 style: TvTypography.headline.copyWith(
-                  color: isDark ? Colors.white : TvColors.ink,
+                  color: textColor,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: TvSpacing.xxs),
               Text(
-                subtitle,
+                'با یک قدم کوچیک شروع کن',
                 style: TvTypography.bodySmall.copyWith(
-                  color: isDark ? TvColors.inkMuted : TvColors.inkSoft,
+                  color: mutedColor,
                 ),
               ),
             ],
           ),
         ),
-        TextButton.icon(
-          onPressed: _openEditor,
-          icon: const Icon(Icons.add_rounded, size: 18),
-          label: const Text('تسک تازه'),
-          style: TextButton.styleFrom(
-            foregroundColor: TvColors.brandPrimary,
-            padding: const EdgeInsets.symmetric(
-              horizontal: TvSpacing.sm,
-              vertical: 4,
+        Material(
+          color: TvColors.brandPrimary,
+          borderRadius: BorderRadius.circular(TvRadius.full),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(TvRadius.full),
+            onTap: _openEditor,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: TvSpacing.md,
+                vertical: TvSpacing.sm,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.add_rounded,
+                    color: Colors.white,
+                    size: 19,
+                  ),
+                  const SizedBox(width: TvSpacing.xs),
+                  Text(
+                    'تسک تازه',
+                    style: TvTypography.label.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ],
-    ).animate().fadeIn(duration: 400.ms, delay: 150.ms);
+    ).animate().fadeIn(duration: 350.ms, delay: 100.ms);
   }
 
-  Widget _filterRow(bool isDark) {
-    final filters = ['همه', 'در جریان', 'انجام‌شده'];
+  Widget _buildFilters(bool isDark) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
       child: Row(
         children: [
-          for (var i = 0; i < filters.length; i++) ...[
-            if (i > 0) const SizedBox(width: TvSpacing.xs),
-            _filterChip(
-              filters[i],
-              selected: _filterIndex == i,
+          for (var index = 0; index < _filters.length; index++) ...[
+            if (index > 0) const SizedBox(width: TvSpacing.xs),
+            _buildFilterChip(
+              label: _filters[index],
+              selected: _filterIndex == index,
               isDark: isDark,
               onTap: () {
+                if (_filterIndex == index) return;
+
                 TvHaptics.tap();
-                setState(() => _filterIndex = i);
+                setState(() => _filterIndex = index);
               },
             ),
           ],
         ],
       ),
-    ).animate().fadeIn(duration: 400.ms, delay: 200.ms);
+    ).animate().fadeIn(duration: 350.ms, delay: 150.ms);
   }
 
-  Widget _filterChip(
-    String label, {
+  Widget _buildFilterChip({
+    required String label,
     required bool selected,
     required bool isDark,
     required VoidCallback onTap,
   }) {
     final foreground = selected
-        ? (isDark ? TvColors.mint : TvColors.brandPrimary)
+        ? Colors.white
         : (isDark ? TvColors.inkMuted : TvColors.inkSoft);
 
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(
-          horizontal: TvSpacing.md,
-          vertical: 10,
-        ),
-        decoration: BoxDecoration(
-          color: selected
-              ? (isDark ? TvColors.nightElevated : Colors.white)
-              : (isDark ? TvColors.nightSoft : TvColors.paper),
-          borderRadius: BorderRadius.circular(TvRadius.full),
-          border: Border.all(
-            color: selected
-                ? TvColors.brandPrimary.withValues(alpha: 0.28)
-                : (isDark ? Colors.white : TvColors.ink)
-                    .withValues(alpha: 0.04),
+    return Material(
+      color: selected
+          ? TvColors.brandPrimary
+          : (isDark ? TvColors.nightSoft : TvColors.paper),
+      borderRadius: BorderRadius.circular(TvRadius.full),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(TvRadius.full),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(
+            horizontal: TvSpacing.md,
+            vertical: TvSpacing.sm,
           ),
-          boxShadow: selected && !isDark
-              ? [
-                  BoxShadow(
-                    color:
-                        TvColors.brandPrimary.withValues(alpha: 0.08),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
-        ),
-        child: Text(
-          label,
-          style: TvTypography.label.copyWith(
-            color: foreground,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(TvRadius.full),
+            border: Border.all(
+              color: selected
+                  ? TvColors.mint.withValues(alpha: 0.35)
+                  : (isDark ? Colors.white : TvColors.ink)
+                      .withValues(alpha: 0.07),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (selected) ...[
+                const Icon(
+                  Icons.check_rounded,
+                  size: 15,
+                  color: TvColors.mint,
+                ),
+                const SizedBox(width: TvSpacing.xs),
+              ],
+              Text(
+                label,
+                style: TvTypography.label.copyWith(
+                  color: foreground,
+                  fontWeight:
+                      selected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  // ────────────────────────────────────────────────────────
-  // Task list
-  // ────────────────────────────────────────────────────────
+  Widget _buildTaskList(bool isDark) {
+    final asyncTasks = ref.watch(todayTasksProvider);
 
-  Widget _taskList(bool isDark) {
-    final async = ref.watch(todayTasksProvider);
-
-    return async.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.symmetric(vertical: TvSpacing.xl),
-        child: Center(
-          child: SizedBox(
-            width: 24,
-            height: 24,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.2,
-              color: TvColors.mint,
-            ),
-          ),
-        ),
-      ),
-      error: (e, _) => _errorState(isDark),
+    return asyncTasks.when(
+      loading: () => _buildLoadingState(isDark),
+      error: (error, stackTrace) => _buildErrorState(isDark),
       data: (tasks) {
-        // Apply filter
-        final filtered = switch (_filterIndex) {
-          1 => tasks.where((t) => !t.isDone).toList(),
-          2 => tasks.where((t) => t.isDone).toList(),
+        final filteredTasks = switch (_filterIndex) {
+          1 => tasks.where((task) => !task.isDone).toList(),
+          2 => tasks.where((task) => task.isDone).toList(),
           _ => tasks,
         };
 
-        if (filtered.isEmpty) {
-          return _emptyState(isDark);
+        if (filteredTasks.isEmpty) {
+          return _buildEmptyState(isDark);
         }
 
         return Column(
           children: [
-            for (final t in filtered)
-              TaskCard(
-                key: ValueKey(t.id),
-                task: t,
-                onToggleDone: () async {
-                  final newStatus = t.isDone ? 'todo' : 'done';
-                  try {
-                    await TasksApi.instance.setStatus(t.id, newStatus);
-                  } catch (_) {}
-                  ref.invalidate(todayTasksProvider);
-                  ref.invalidate(allTasksProvider);
-                },
-                onTap: () {
-                  TvHaptics.tap();
-                  context.push('/task', extra: t);
-                },
+            for (final task in filteredTasks)
+              Padding(
+                padding: const EdgeInsets.only(
+                  bottom: TvSpacing.sm,
+                ),
+                child: TaskCard(
+                  key: ValueKey(task.id),
+                  task: task,
+                  onToggleDone: () async {
+                    final newStatus = task.isDone ? 'todo' : 'done';
+
+                    try {
+                      await TasksApi.instance.setStatus(
+                        task.id,
+                        newStatus,
+                      );
+                    } catch (_) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text(
+                              'تغییر وضعیت انجام نشد. دوباره تلاش کن.',
+                            ),
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: TvColors.rose,
+                          ),
+                        );
+                      }
+                    }
+
+                    if (!mounted) return;
+
+                    ref.invalidate(todayTasksProvider);
+                    ref.invalidate(allTasksProvider);
+                  },
+                  onTap: () {
+                    TvHaptics.tap();
+                    context.push('/task', extra: task);
+                  },
+                ),
               ),
           ],
         );
@@ -788,196 +911,254 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _errorState(bool isDark) {
+  Widget _buildLoadingState(bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: TvSpacing.xl),
       child: Column(
         children: [
-          Icon(
-            Icons.cloud_off_rounded,
-            size: 44,
-            color: isDark ? TvColors.inkMuted : TvColors.inkSoft,
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: TvColors.mint.withValues(alpha: 0.14),
+              shape: BoxShape.circle,
+            ),
+            child: const Padding(
+              padding: EdgeInsets.all(14),
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: TvColors.brandPrimary,
+              ),
+            ),
           ),
           const SizedBox(height: TvSpacing.md),
           Text(
-            'اتصال به باغ برقرار نشد',
-            style: TvTypography.title.copyWith(
-              color: isDark ? Colors.white : TvColors.ink,
-              fontWeight: FontWeight.w700,
+            'داریم باغت رو مرتب می‌کنیم…',
+            style: TvTypography.bodySmall.copyWith(
+              color: isDark ? TvColors.inkMuted : TvColors.inkSoft,
             ),
-          ),
-          const SizedBox(height: TvSpacing.lg),
-          TvButton(
-            label: 'تلاش دوباره',
-            icon: Icons.refresh_rounded,
-            variant: TvButtonVariant.secondary,
-            expand: false,
-            onPressed: () {
-              TvHaptics.tap();
-              ref.invalidate(todayTasksProvider);
-              ref.invalidate(allTasksProvider);
-            },
           ),
         ],
       ),
     );
   }
 
-  Widget _emptyState(bool isDark) {
-    final cardColor = isDark ? TvColors.nightSoft : TvColors.paper;
+  Widget _buildErrorState(bool isDark) {
     final textColor = isDark ? Colors.white : TvColors.ink;
     final mutedColor = isDark ? TvColors.inkMuted : TvColors.inkSoft;
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        TvSpacing.lg,
-        TvSpacing.xl,
-        TvSpacing.lg,
-        TvSpacing.lg,
+    return _buildMessageSurface(
+      isDark: isDark,
+      icon: Icons.cloud_off_rounded,
+      iconColor: TvColors.rose,
+      title: 'ارتباط با باغ برقرار نشد',
+      message: 'اتصال رو بررسی کن و دوباره امتحان کن.',
+      action: TvButton(
+        label: 'تلاش دوباره',
+        icon: Icons.refresh_rounded,
+        variant: TvButtonVariant.secondary,
+        expand: false,
+        onPressed: () {
+          TvHaptics.tap();
+          ref.invalidate(todayTasksProvider);
+          ref.invalidate(allTasksProvider);
+        },
       ),
+      titleColor: textColor,
+      messageColor: mutedColor,
+    );
+  }
+
+  Widget _buildEmptyState(bool isDark) {
+    final isAllFilter = _filterIndex == 0;
+    final isDoneFilter = _filterIndex == 2;
+
+    final title = isAllFilter
+        ? 'باغت آماده‌ی کاشت است'
+        : isDoneFilter
+            ? 'هنوز کاری کامل نشده'
+            : 'همه‌چیز رو به راهه';
+
+    final message = isAllFilter
+        ? 'یه کار کوچیک تعریف کن و اولین جوانه‌ی مسیرت رو بکار.'
+        : isDoneFilter
+            ? 'وقتی اولین کارت رو انجام بدی، اینجا می‌بینیش.'
+            : 'فعلاً کاری در جریان نیست؛ می‌تونی کمی استراحت کنی یا کار تازه‌ای بسازی.';
+
+    return _buildMessageSurface(
+      isDark: isDark,
+      icon: isAllFilter
+          ? Icons.spa_rounded
+          : isDoneFilter
+              ? Icons.park_rounded
+              : Icons.self_improvement_rounded,
+      iconColor: TvColors.brandPrimary,
+      title: title,
+      message: message,
+      action: isAllFilter || !isDoneFilter
+          ? TvButton(
+              label: isAllFilter ? 'ساخت اولین تسک' : 'ساخت تسک تازه',
+              icon: Icons.add_rounded,
+              onPressed: _openEditor,
+            )
+          : null,
+      showDecorativeDots: true,
+    )
+        .animate()
+        .fadeIn(duration: 450.ms, delay: 100.ms)
+        .slideY(
+          begin: 0.025,
+          end: 0,
+          duration: 450.ms,
+          curve: Curves.easeOutCubic,
+        );
+  }
+
+  Widget _buildMessageSurface({
+    required bool isDark,
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String message,
+    Widget? action,
+    Color? titleColor,
+    Color? messageColor,
+    bool showDecorativeDots = false,
+  }) {
+    final resolvedTitleColor =
+        titleColor ?? (isDark ? Colors.white : TvColors.ink);
+    final resolvedMessageColor =
+        messageColor ?? (isDark ? TvColors.inkMuted : TvColors.inkSoft);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(TvSpacing.lg),
       decoration: BoxDecoration(
-        color: cardColor,
+        color: isDark ? TvColors.nightSoft : TvColors.paper,
         borderRadius: BorderRadius.circular(TvRadius.xl),
         border: Border.all(
           color: isDark
-              ? Colors.white.withValues(alpha: 0.05)
+              ? Colors.white.withValues(alpha: 0.06)
               : TvColors.brandPrimary.withValues(alpha: 0.08),
         ),
-        boxShadow: isDark
-            ? null
-            : [
-                BoxShadow(
-                  color: TvColors.brandPrimary.withValues(alpha: 0.08),
-                  blurRadius: 32,
-                  offset: const Offset(0, 12),
-                ),
-              ],
+        boxShadow: [
+          BoxShadow(
+            color: TvColors.brandPrimary.withValues(
+              alpha: isDark ? 0.04 : 0.06,
+            ),
+            blurRadius: 26,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         children: [
           SizedBox(
-            width: 148,
-            height: 132,
+            width: 116,
+            height: 104,
             child: Stack(
               alignment: Alignment.center,
               children: [
                 Container(
-                  width: 116,
-                  height: 116,
+                  width: 100,
+                  height: 100,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        TvColors.mint
-                            .withValues(alpha: isDark ? 0.18 : 0.24),
+                        TvColors.mint.withValues(
+                          alpha: isDark ? 0.15 : 0.24,
+                        ),
                         TvColors.mint.withValues(alpha: 0),
                       ],
                     ),
                   ),
                 ),
-                Positioned(
-                  top: 8,
-                  right: 24,
-                  child:
-                      _decorativeDot(color: TvColors.sunGold, size: 8),
-                ),
-                Positioned(
-                  left: 18,
-                  top: 35,
-                  child: _decorativeDot(color: TvColors.rose, size: 6),
-                ),
-                Positioned(
-                  right: 16,
-                  bottom: 23,
-                  child: _decorativeDot(color: TvColors.sky, size: 7),
-                ),
+                if (showDecorativeDots) ...[
+                  const Positioned(
+                    top: 10,
+                    right: 15,
+                    child: _AccentDot(color: TvColors.sunGold, size: 7),
+                  ),
+                  const Positioned(
+                    left: 11,
+                    top: 31,
+                    child: _AccentDot(color: TvColors.rose, size: 6),
+                  ),
+                  const Positioned(
+                    right: 11,
+                    bottom: 15,
+                    child: _AccentDot(color: TvColors.sky, size: 7),
+                  ),
+                ],
                 Container(
-                  width: 76,
-                  height: 76,
+                  width: 70,
+                  height: 70,
                   decoration: BoxDecoration(
-                    color: isDark
-                        ? TvColors.nightElevated
-                        : TvColors.brandPrimarySoft,
-                    borderRadius: BorderRadius.circular(27),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: isDark
+                          ? [
+                              TvColors.nightElevated,
+                              TvColors.brandPrimaryDeep,
+                            ]
+                          : [
+                              TvColors.brandPrimarySoft,
+                              TvColors.mintSoft,
+                            ],
+                    ),
+                    borderRadius: BorderRadius.circular(24),
                     border: Border.all(
-                      color: TvColors.mint.withValues(alpha: 0.22),
+                      color: TvColors.mint.withValues(alpha: 0.35),
                     ),
                   ),
-                  child: const Icon(
-                    Icons.spa_rounded,
-                    size: 39,
-                    color: TvColors.brandPrimary,
+                  child: Icon(
+                    icon,
+                    color: isDark ? TvColors.mint : iconColor,
+                    size: 34,
                   ),
-                )
-                    .animate(onPlay: (c) => c.repeat(reverse: true))
-                    .moveY(
-                      begin: 0,
-                      end: -4,
-                      duration: 1800.ms,
-                      curve: Curves.easeInOut,
-                    ),
+                ),
               ],
             ),
           ),
-          const SizedBox(height: TvSpacing.md),
+          const SizedBox(height: TvSpacing.sm),
           Text(
-            'باغت آماده‌ی کاشت است',
+            title,
             textAlign: TextAlign.center,
             style: TvTypography.title.copyWith(
-              color: textColor,
+              color: resolvedTitleColor,
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: TvSpacing.xs),
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 280),
+            constraints: const BoxConstraints(maxWidth: 300),
             child: Text(
-              'یه تسک کوچیک بساز و اولین جوانه‌ی مسیرت رو ببین.',
+              message,
               textAlign: TextAlign.center,
               style: TvTypography.bodySmall.copyWith(
-                color: mutedColor,
+                color: resolvedMessageColor,
                 height: 1.8,
               ),
             ),
           ),
-          const SizedBox(height: TvSpacing.lg),
-          TvButton(
-            label: 'ساخت اولین تسک',
-            icon: Icons.add_rounded,
-            onPressed: _openEditor,
-          ),
-        ],
-      ),
-    )
-        .animate()
-        .fadeIn(duration: 500.ms, delay: 250.ms)
-        .slideY(begin: 0.045, end: 0, duration: 500.ms);
-  }
-
-  Widget _decorativeDot({required Color color, required double size}) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.24),
-            blurRadius: 10,
-            spreadRadius: 1,
-          ),
+          if (action != null) ...[
+            const SizedBox(height: TvSpacing.lg),
+            action,
+          ],
         ],
       ),
     );
   }
 
-  // ────────────────────────────────────────────────────────
-  // Helpers
-  // ────────────────────────────────────────────────────────
+  // ---------------------------------------------------------------------------
+  // Actions and formatting
+  // ---------------------------------------------------------------------------
 
   void _openEditor() {
     TvHaptics.tap();
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -987,11 +1168,52 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  String _fa(String s) {
-    const fa = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-    return s.split('').map((c) {
-      final d = int.tryParse(c);
-      return d == null ? c : fa[d];
+  String _fa(String value) {
+    const digits = [
+      '۰',
+      '۱',
+      '۲',
+      '۳',
+      '۴',
+      '۵',
+      '۶',
+      '۷',
+      '۸',
+      '۹',
+    ];
+
+    return value.split('').map((character) {
+      final digit = int.tryParse(character);
+      return digit == null ? character : digits[digit];
     }).join();
+  }
+}
+
+class _AccentDot extends StatelessWidget {
+  const _AccentDot({
+    required this.color,
+    required this.size,
+  });
+
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.28),
+            blurRadius: 9,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+    );
   }
 }
