@@ -97,7 +97,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     setState(() => _addingSubtask = true);
     try {
       await TasksApi.instance.createSubtask(parentId: _task.id, title: title);
-      _newSubtaskTitle.clear();
+      await TasksApi.instance.delete(s.id);
       ref.invalidate(subtasksProvider(_task.id));
       await _refreshTask();
       _invalidateEverything();
@@ -216,8 +216,12 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   void _invalidateEverything() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      // Invalidate every provider that might show this task's subtask counts.
+      ref.invalidate(dayTasksProvider);
       ref.invalidate(todayTasksProvider);
       ref.invalidate(allTasksProvider);
+      // Also refresh this task's own data.
+      ref.invalidate(subtasksProvider(_task.id));
     });
   }
 

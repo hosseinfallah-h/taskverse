@@ -133,6 +133,20 @@ def set_status(db: Session, task: Task, status: str) -> Task:
         task.completed_at = _now()
     elif status in ("todo", "doing"):
         task.completed_at = None
+
+    # Cascade: if the parent is being un-done, un-check all its subtasks.
+    if status in ("todo", "doing"):
+        db.query(Task).filter(
+            Task.parent_id == task.id,
+            Task.deleted_at.is_(None),
+        ).update(
+            {
+                "status": "todo",
+                "completed_at": None,
+            },
+            synchronize_session=False,
+        )
+
     db.commit()
     db.refresh(task)
     logger.info(

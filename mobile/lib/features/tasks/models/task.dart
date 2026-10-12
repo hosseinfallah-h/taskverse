@@ -83,8 +83,35 @@ class Task {
     subtasksCount: (json['subtasks_count'] as int?) ?? 0,
     subtasksDone: (json['subtasks_done'] as int?) ?? 0,
   );
+
+  /// Returns a copy with the status updated. Used for optimistic UI.
+  Task copyWithStatus(String newStatus) {
+    return Task(
+      id: id,
+      title: title,
+      description: description,
+      projectId: projectId,
+      parentId: parentId,
+      status: newStatus,
+      priority: priority,
+      energy: energy,
+      dueDate: dueDate,
+      dueTime: dueTime,
+      estimatedMin: estimatedMin,
+      actualMin: actualMin,
+      rrule: rrule,
+      deferredUntil: deferredUntil,
+      completedAt: newStatus == 'done' ? DateTime.now() : null,
+      createdAt: createdAt,
+      sortOrder: sortOrder,
+      tags: tags,
+      subtasksCount: subtasksCount,
+      subtasksDone: subtasksDone,
+    );
+  }
 }
 
+/// Lightweight tag reference (embedded in task responses).
 class TagBrief {
   const TagBrief({required this.id, required this.name, this.color});
 
@@ -99,7 +126,7 @@ class TagBrief {
   );
 }
 
-/// Lightweight model for a subtask as returned in the task detail screen.
+/// Lightweight subtask reference (returned by `/tasks/{id}/subtasks`).
 class Subtask {
   const Subtask({
     required this.id,
