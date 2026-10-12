@@ -3,6 +3,10 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../projects/providers/projects_provider.dart';
+import '../../projects/models/project.dart';
+import '../../projects/services/projects_api.dart';
+import '../../tags/services/tags_api.dart';
+import '../../tasks/models/task.dart' show TagBrief;
 
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/haptics.dart';
@@ -1095,30 +1099,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void _openEditor() {
     TvHaptics.tap();
 
-    // Fetch projects + tags BEFORE opening the sheet, then pass them in.
-    // This avoids holding Riverpod subscriptions inside the modal route,
-    // which was causing "_dependents.isEmpty" assertions on close.
-    final projects = ref.read(projectsProvider).value ?? const [];
-    final tags = ref.read(tagsProvider).value ?? const [];
+    final projects = ref.read(projectsProvider).value ?? const <Project>[];
+    final tags = ref.read(tagsProvider).value ?? const <TagBrief>[];
 
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      useRootNavigator: true,
       backgroundColor: Colors.transparent,
-      builder: (_) =>
-          TaskEditorSheet(initialProjects: projects, initialTags: tags),
-    ).then((_) {
-      if (!mounted) return;
-      // Refresh after sheet closes, on the next frame.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        ref.invalidate(projectsProvider);
-        ref.invalidate(tagsProvider);
-        ref.invalidate(todayTasksProvider);
-        ref.invalidate(allTasksProvider);
-      });
-    });
+      builder: (_) => TaskEditorSheet(
+        initialProjects: projects,
+        initialTags: tags,
+        onCreateProject: (name) async {
+          try {
+            return await ProjectsApi.instance.create(name: name);
+          } catch (_) {
+            return null;
+          }
+        },
+        onCreateTag: (name) async {
+          try {
+            return await TagsApi.instance.create(name: name);
+          } catch (_) {
+            return null;
+          }
+        },
+        onSaved: () {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            ref.invalidate(projectsProvider);
+            ref.invalidate(tagsProvider);
+            ref.invalidate(todayTasksProvider);
+            ref.invalidate(allTasksProvider);
+          });
+        },
+      ),
+    );
   }
 
   String _fa(String value) {
