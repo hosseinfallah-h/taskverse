@@ -107,7 +107,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
               children: [
                 Expanded(
                   child: TextButton(
-                    onPressed: () => Navigator.of(_).pop(false),
+                    onPressed: () => Navigator.of(context).pop(false),
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(

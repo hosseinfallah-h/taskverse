@@ -3,6 +3,7 @@ class Task {
   const Task({
     required this.id,
     required this.title,
+    required this.createdAt,
     this.description,
     this.projectId,
     this.parentId,
@@ -37,6 +38,7 @@ class Task {
   final String? rrule;
   final DateTime? deferredUntil;
   final DateTime? completedAt;
+  final DateTime createdAt;
   final int sortOrder;
   final List<TagBrief> tags;
   final int subtasksCount;
@@ -71,6 +73,9 @@ class Task {
         completedAt: json['completed_at'] == null
             ? null
             : DateTime.parse(json['completed_at'] as String),
+        createdAt: json['created_at'] == null
+            ? DateTime.now()
+            : DateTime.parse(json['created_at'] as String),
         sortOrder: (json['sort_order'] as int?) ?? 0,
         tags: (json['tags'] as List<dynamic>? ?? [])
             .map((e) => TagBrief.fromJson(e as Map<String, dynamic>))
