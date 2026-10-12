@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show FontFeature;
 
 import 'package:flutter/material.dart';
 
@@ -6,16 +7,20 @@ import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
 
 /// Two-layer animated progress ring:
-/// - Inner ring: today's tasks
-/// - Outer ring: this week's tasks
+/// - Inner ring: today's tasks (mint → garden green)
+/// - Outer ring: this week's tasks (sun gold → rose)
+///
+/// Center shows the today percentage in large Persian numerals with a
+/// subtle label chip below. Both rings animate on change with an ease-out
+/// cubic curve for a soft, alive feel.
 class TvProgressRing extends StatefulWidget {
   const TvProgressRing({
     super.key,
     required this.todayRatio,
     required this.weekRatio,
     this.size = 130,
-    this.innerStroke = 8,
-    this.outerStroke = 5,
+    this.innerStroke = 9,
+    this.outerStroke = 6,
     this.todayColor = TvColors.mint,
     this.weekColor = TvColors.sunGold,
     this.innerTrack,
@@ -98,6 +103,8 @@ class _TvProgressRingState extends State<TvProgressRing>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return SizedBox(
       width: widget.size,
       height: widget.size,
@@ -110,8 +117,7 @@ class _TvProgressRingState extends State<TvProgressRing>
               weekProgress: _weekAnim.value,
               todayColor: widget.todayColor,
               weekColor: widget.weekColor,
-              innerTrack:
-                  widget.innerTrack ?? TvColors.brandPrimarySoft,
+              innerTrack: widget.innerTrack ?? TvColors.brandPrimarySoft,
               outerTrack: widget.outerTrack ?? TvColors.sunGoldSoft,
               innerStroke: widget.innerStroke,
               outerStroke: widget.outerStroke,
@@ -123,18 +129,23 @@ class _TvProgressRingState extends State<TvProgressRing>
                   if (widget.showPercent)
                     Text(
                       '${_fa(_todayAnim.value * 100)}٪',
-                      style: TvTypography.numericDisplay.copyWith(
-                        fontSize: widget.size * 0.24,
-                        color: TvColors.brandPrimary,
+                      style: TextStyle(
+                        fontFamily: TvTypography.fontFamily,
+                        fontSize: widget.size * 0.26,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.white : TvColors.brandPrimary,
                         height: 1.0,
+                        letterSpacing: -1.0,
+                        fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Text(
                     widget.centerLabel,
                     style: TvTypography.caption.copyWith(
-                      color: TvColors.inkMuted,
+                      color: isDark ? TvColors.inkMuted : TvColors.inkSoft,
                       fontSize: 11,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
@@ -174,6 +185,7 @@ class _DoubleRingPainter extends CustomPainter {
 
     // ---- OUTER RING (week) ----
     final outerRadius = (size.width - outerStroke) / 2;
+
     final outerTrackPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = outerStroke
@@ -201,7 +213,10 @@ class _DoubleRingPainter extends CustomPainter {
     }
 
     // ---- INNER RING (today) ----
-    final innerRadius = outerRadius - outerStroke - 4 - (innerStroke / 2);
+    // Gap between rings scales with stroke widths so it looks balanced.
+    final gap = (outerStroke + innerStroke) * 0.5;
+    final innerRadius = outerRadius - outerStroke / 2 - gap - innerStroke / 2;
+
     final innerTrackPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = innerStroke
@@ -234,5 +249,7 @@ class _DoubleRingPainter extends CustomPainter {
       old.todayProgress != todayProgress ||
       old.weekProgress != weekProgress ||
       old.todayColor != todayColor ||
-      old.weekColor != weekColor;
+      old.weekColor != weekColor ||
+      old.innerStroke != innerStroke ||
+      old.outerStroke != outerStroke;
 }

@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -8,9 +7,10 @@ import '../../core/theme/typography.dart';
 
 /// Premium, theme-aware text input for TaskVerse.
 ///
-/// Designed for Persian-first interfaces with RTL text direction,
-/// accessible focus states, optional validation feedback, and
-/// consistent Garden at Dawn styling.
+/// - Persian-first (RTL default)
+/// - Optional label, icon, hint, helper, error
+/// - Supports multiline, obscured, digits-only
+/// - Garden at Dawn themed focus glow
 class TvInput extends StatelessWidget {
   const TvInput({
     super.key,
@@ -45,9 +45,9 @@ class TvInput extends StatelessWidget {
     this.expands = false,
     this.showCounter = false,
     this.required = false,
-  })  : assert(minLines == null || minLines > 0),
-        assert(maxLines == null || maxLines > 0),
-        assert(!expands || (minLines == null && maxLines == null));
+  }) : assert(minLines == null || minLines > 0),
+       assert(maxLines == null || maxLines > 0),
+       assert(!expands || (minLines == null && maxLines == null));
 
   final TextEditingController controller;
   final String label;
@@ -62,22 +62,11 @@ class TvInput extends StatelessWidget {
   final bool centerText;
   final TextStyle? style;
   final bool autofocus;
-
-  /// Enables or disables editing and interaction.
   final bool enabled;
-
-  /// Allows focus and selection without editing.
   final bool readOnly;
-
-  /// Optional validation error shown beneath the input.
   final String? errorText;
-
-  /// Optional supporting text shown beneath the input.
   final String? helperText;
-
-  /// Optional leading widget, placed before the text field content.
   final Widget? prefix;
-
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
   final VoidCallback? onTap;
@@ -89,11 +78,7 @@ class TvInput extends StatelessWidget {
   final int? minLines;
   final int? maxLines;
   final bool expands;
-
-  /// Whether to show the character counter when maxLength is specified.
   final bool showCounter;
-
-  /// Adds a visual required marker beside the label.
   final bool required;
 
   @override
@@ -104,35 +89,41 @@ class TvInput extends StatelessWidget {
     final hasError = errorText != null && errorText!.trim().isNotEmpty;
 
     final fill = enabled
-        ? (isDark ? TvColors.nightSoft : TvColors.paper)
-        : scheme.onSurface.withValues(alpha: 0.045);
+        ? (isDark ? TvColors.nightSoft : TvColors.sand)
+        : scheme.onSurface.withValues(alpha: 0.04);
 
     final textColor = enabled
-        ? scheme.onSurface
+        ? (isDark ? Colors.white : TvColors.ink)
         : scheme.onSurface.withValues(alpha: 0.45);
 
     final accentColor = isDark ? TvColors.mint : TvColors.brandPrimary;
-    final borderColor = scheme.outlineVariant;
+    final borderColor = (isDark ? Colors.white : TvColors.ink).withValues(
+      alpha: 0.08,
+    );
 
-    OutlineInputBorder makeBorder({
-      required Color color,
-      double width = 1,
-    }) {
+    OutlineInputBorder makeBorder({required Color color, double width = 1}) {
       return OutlineInputBorder(
-        borderRadius: BorderRadius.circular(TvRadius.lg),
+        borderRadius: BorderRadius.circular(TvRadius.md),
         borderSide: BorderSide(color: color, width: width),
       );
     }
+
+    final effectiveMaxLines = expands ? null : (obscure ? 1 : (maxLines ?? 1));
+    final effectiveMinLines = expands
+        ? null
+        : (multiline ? (minLines ?? maxLines ?? 1) : null);
+    final multiline = (maxLines ?? 1) > 1;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Label row
         Padding(
           padding: const EdgeInsetsDirectional.only(
             start: 4,
             end: 4,
-            bottom: TvSpacing.xs,
+            bottom: 6,
           ),
           child: Row(
             children: [
@@ -144,10 +135,8 @@ class TvInput extends StatelessWidget {
                   style: TvTypography.label.copyWith(
                     color: hasError
                         ? scheme.error
-                        : enabled
-                            ? scheme.onSurface
-                            : scheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
+                        : (isDark ? TvColors.inkMuted : TvColors.inkSoft),
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -164,17 +153,19 @@ class TvInput extends StatelessWidget {
             ],
           ),
         ),
+
+        // Field
         AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+          duration: const Duration(milliseconds: 180),
           curve: Curves.easeOutCubic,
           decoration: BoxDecoration(
             color: fill,
-            borderRadius: BorderRadius.circular(TvRadius.lg),
+            borderRadius: BorderRadius.circular(TvRadius.md),
             boxShadow: hasError
                 ? [
                     BoxShadow(
-                      color: scheme.error.withValues(alpha: 0.055),
-                      blurRadius: 14,
+                      color: scheme.error.withValues(alpha: 0.10),
+                      blurRadius: 16,
                       offset: const Offset(0, 4),
                     ),
                   ]
@@ -183,8 +174,8 @@ class TvInput extends StatelessWidget {
           child: TextField(
             controller: controller,
             focusNode: focusNode,
-            keyboardType: keyboardType ??
-                (digitsOnly ? TextInputType.number : null),
+            keyboardType:
+                keyboardType ?? (digitsOnly ? TextInputType.number : null),
             obscureText: obscure,
             autofocus: autofocus,
             enabled: enabled,
@@ -192,25 +183,26 @@ class TvInput extends StatelessWidget {
             onChanged: onChanged,
             onSubmitted: onSubmitted,
             onTap: onTap,
-            textInputAction: textInputAction,
+            textInputAction:
+                textInputAction ?? (multiline ? TextInputAction.newline : null),
             textCapitalization: textCapitalization,
             autocorrect: autocorrect,
             enableSuggestions: enableSuggestions,
-            minLines: expands ? null : minLines,
-            maxLines: expands ? null : (obscure ? 1 : maxLines),
+            minLines: effectiveMinLines,
+            maxLines: effectiveMaxLines,
             expands: expands,
             textAlign: centerText ? TextAlign.center : textAlign,
             textDirection: TextDirection.rtl,
-            textAlignVertical: expands
+            textAlignVertical: multiline
                 ? TextAlignVertical.top
                 : TextAlignVertical.center,
             inputFormatters: [
-              if (digitsOnly)
-                FilteringTextInputFormatter.digitsOnly,
+              if (digitsOnly) FilteringTextInputFormatter.digitsOnly,
               if (maxLength != null)
                 LengthLimitingTextInputFormatter(maxLength),
             ],
-            style: style ??
+            style:
+                style ??
                 TvTypography.body.copyWith(
                   color: textColor,
                   fontWeight: FontWeight.w500,
@@ -220,7 +212,7 @@ class TvInput extends StatelessWidget {
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: TvTypography.body.copyWith(
-                color: scheme.onSurfaceVariant.withValues(alpha: 0.78),
+                color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
                 fontWeight: FontWeight.w400,
               ),
               prefixIcon: icon == null
@@ -236,8 +228,8 @@ class TvInput extends StatelessWidget {
                         color: hasError
                             ? scheme.error
                             : enabled
-                                ? accentColor
-                                : scheme.onSurfaceVariant,
+                            ? accentColor
+                            : scheme.onSurfaceVariant,
                       ),
                     ),
               prefixIconConstraints: const BoxConstraints(
@@ -246,32 +238,34 @@ class TvInput extends StatelessWidget {
               ),
               prefix: prefix,
               suffixIcon: suffix,
-              filled: true,
-              fillColor: Colors.transparent,
+              filled: false,
               isDense: false,
-              contentPadding: const EdgeInsets.symmetric(
+              contentPadding: EdgeInsets.symmetric(
                 horizontal: TvSpacing.md,
-                vertical: 18,
+                vertical: multiline ? TvSpacing.md : 18,
               ),
               counterText: showCounter ? null : '',
               errorText: null,
               border: makeBorder(color: Colors.transparent),
               enabledBorder: makeBorder(
                 color: hasError
-                    ? scheme.error.withValues(alpha: 0.8)
-                    : borderColor.withValues(alpha: 0.72),
+                    ? scheme.error.withValues(alpha: 0.7)
+                    : borderColor,
               ),
               focusedBorder: makeBorder(
                 color: hasError ? scheme.error : accentColor,
                 width: 1.5,
               ),
               disabledBorder: makeBorder(
-                color: borderColor.withValues(alpha: 0.35),
+                color: borderColor.withValues(alpha: 0.4),
               ),
             ),
           ),
         ),
-        if (hasError || (helperText != null && helperText!.isNotEmpty)) ...[
+
+        // Helper / Error
+        if (hasError ||
+            (helperText != null && helperText!.trim().isNotEmpty)) ...[
           const SizedBox(height: 6),
           Padding(
             padding: const EdgeInsetsDirectional.only(start: 4, end: 4),
@@ -285,7 +279,7 @@ class TvInput extends StatelessWidget {
                   size: 14,
                   color: hasError
                       ? scheme.error
-                      : scheme.onSurfaceVariant,
+                      : (isDark ? TvColors.inkMuted : TvColors.inkSoft),
                 ),
                 const SizedBox(width: 5),
                 Expanded(
@@ -294,7 +288,7 @@ class TvInput extends StatelessWidget {
                     style: TvTypography.caption.copyWith(
                       color: hasError
                           ? scheme.error
-                          : scheme.onSurfaceVariant,
+                          : (isDark ? TvColors.inkMuted : TvColors.inkSoft),
                     ),
                   ),
                 ),

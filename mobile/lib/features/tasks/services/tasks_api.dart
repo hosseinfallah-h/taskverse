@@ -41,6 +41,7 @@ class TasksApi {
     String? dueTime,
     int? estimatedMin,
     List<int> tagIds = const [],
+    String? rrule,
   }) async {
     final r = await _dio.post(
       ApiConfig.tasks,
@@ -56,6 +57,7 @@ class TasksApi {
         if (dueTime != null) 'due_time': dueTime,
         if (estimatedMin != null) 'estimated_min': estimatedMin,
         'tag_ids': tagIds,
+        if (rrule != null) 'rrule': rrule,
       },
     );
     return Task.fromJson(r.data as Map<String, dynamic>);
