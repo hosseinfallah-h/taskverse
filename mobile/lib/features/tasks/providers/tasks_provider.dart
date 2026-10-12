@@ -47,3 +47,33 @@ final subtasksProvider = FutureProvider.family<List<Subtask>, int>((
 ) async {
   return TasksApi.instance.listSubtasks(parentId);
 });
+
+/// Currently selected day in the home week strip.
+/// Defaults to today. Nulls mean "all days" is not available — always a date.
+final selectedDayProvider = StateProvider<DateTime>((ref) {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month, now.day);
+});
+
+/// Tasks filtered to the currently selected day.
+final dayTasksProvider = FutureProvider<List<Task>>((ref) async {
+  final all = await TasksApi.instance.list(view: 'all');
+  final day = ref.watch(selectedDayProvider);
+  final start = DateTime(day.year, day.month, day.day);
+  final end = start.add(const Duration(days: 1));
+
+  final filtered = all.where((t) {
+    if (t.dueDate != null) {
+      return !t.dueDate!.isBefore(start) && t.dueDate!.isBefore(end);
+    }
+    // Tasks without due dates fall into their creation day.
+    return !t.createdAt.isBefore(start) && t.createdAt.isBefore(end);
+  }).toList();
+
+  // Sort: undone first, then by due_time / priority.
+  filtered.sort((a, b) {
+    if (a.isDone != b.isDone) return a.isDone ? 1 : -1;
+    return a.priority.compareTo(b.priority);
+  });
+  return filtered;
+});
