@@ -1,0 +1,1 @@
+"""Tasks module: core product."""
