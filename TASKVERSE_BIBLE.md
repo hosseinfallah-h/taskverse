@@ -169,17 +169,23 @@ Legend: **M**=Must v1.0 · **S**=Should v1.x · **C**=Could v2+
 |--------|--------|--------|-------|
 | health | 0 | ✅ Live | `/`, `/health` |
 | meta | 0 | ✅ Live | `/meta/info` |
-| auth | 1 | ⏳ Planned | OTP + JWT + refresh |
-| users | 1 | ⏳ Planned | CRUD + avatars + dashboard |
-| tasks | 2 | ⏳ Planned | Core product |
-| people | 2 | ⏳ Planned | Friends + birthdays |
-| reports | 6 | ⏳ Planned | Charts + insights |
+| auth | 1 | ✅ Live | OTP + JWT + refresh + rate limit |
+| users | 1 | ✅ Live | CRUD + avatars + tiers |
+| tasks | 2 | ⏳ Next | Core product |
+| projects | 2 | ⏳ Next | Grouping |
+| tags | 2 | ⏳ Next | Contexts |
+| people | 2 | ⏳ Next | Friends + birthdays |
 | bale_bot | 3 | ⏳ Planned | 7AM brief + voice |
 | habits | 4 | ⏳ Planned | Streaks + XP |
-| content | 6 | ⏳ Planned | Pipeline + scheduler |
-| prompts | 6 | ⏳ Planned | AI prompt vault |
+| rituals | 4 | ⏳ Planned | Daily / weekly review |
+| goals | 4 | ⏳ Planned | Monthly + quarterly |
 | attachments | 5 | ⏳ Planned | Files + voice |
-| audit | 4 | ⏳ Planned | Query UI + retention |
+| voice | 5 | ⏳ Planned | Whisper local |
+| content | 6 | ⏳ Planned | Pipeline + scheduler |
+| insights | 6 | ⏳ Planned | Analytics saver |
+| reports | 6 | ⏳ Planned | Charts (fl_chart) |
+| prompts | 6 | ⏳ Planned | AI prompt vault |
+| audit | 8 | ⏳ Planned | Query UI + retention |
 | admin | 8 | ⏳ Planned | Approve users + ops |
 | notifications | 3 | ⏳ Planned | Bale dispatch |
 
@@ -199,8 +205,8 @@ Rules:
 
 **Log sinks:**
 1. stdout (structured JSON in prod, human-readable in dev)
-2. `app_logs` table (queryable; writer lands in Sprint 1)
-3. `audit_log` table (immutable; writer lands in Sprint 4)
+2. `app_logs` table (queryable; async writer live)
+3. `audit_log` table (immutable; writer lands Sprint 4)
 
 **Every request carries:**
 - `X-Request-ID` (returned to client, logged)
@@ -210,6 +216,46 @@ Rules:
 - `app_logs`: 90 days (pruned by cron, Sprint 8)
 - `audit_log`: forever (compliance)
 
+## PART J — DESIGN SYSTEM
+
+Locked in `docs/design/DESIGN_SYSTEM.md` v1.0.
+
+**Palette:** "Garden at Dawn" — warm sand + garden green + mint + sun gold.
+**Motion:** shared axis + container transform + hero.
+**Haptics:** every meaningful tap.
+**Font:** IranSans (Vazirmatn fallback).
+**Calendar:** Jalali native.
+**Three modes:** light, dark, AMOLED (pure black).
+
+**Inspirations (fused):**
+1. "Productive Day" — progress ring, pill filters, pill bottom nav
+2. "Delivery App UI Kit" — hero metric cards, timeline bars, center FAB
+3. "Hello John!" — two-tone project cards, category pills, time-range
+
+## PART K — SECURITY STATUS
+
+Live:
+- HTTPS-ready (deploy in Sprint 8)
+- JWT access 30d, refresh 90d, hashed at rest
+- Rate limiting: 60/min default, 5/min auth
+- CORS strict allowlist
+- Passwords: bcrypt 4.0.1, min 8 chars
+- OTP: 6-digit, 2-min expiry, 5 attempts max
+- Pydantic validation on every endpoint
+- SQLAlchemy parameterized queries only
+- Audit log table ready
+- No foreign telemetry, no ad SDKs
+
+Scheduled:
+- File uploads MIME sniff (Sprint 5)
+- UFW firewall (Sprint 8)
+- fail2ban (Sprint 8)
+- SSH hardening (Sprint 8)
+- Auto backups (Sprint 8)
+- Log rotation (Sprint 8)
+- Grafana monitoring (Sprint 8)
+
 ---
 
-**Next:** Sprint 1 — Auth & Users (OTP + JWT + avatars + admin approval)
+**Last updated:** 2026-10-12 · Sprint 1 complete
+**Next:** Sprint 2 — Tasks & People modules

@@ -8,9 +8,10 @@ Registration flow:
 5. GET  /auth/me         -> current user.
 """
 
+import ipaddress
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -35,10 +36,23 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 def _client_ip(request: Request) -> str | None:
+    """Return a valid IP string, or None if unavailable/invalid.
+
+    Starlette's TestClient reports "testclient" as the host - reject it.
+    """
     fwd = request.headers.get("x-forwarded-for")
-    if fwd:
-        return fwd.split(",")[0].strip()
-    return request.client.host if request.client else None
+    raw = (
+        fwd.split(",")[0].strip()
+        if fwd
+        else (request.client.host if request.client else None)
+    )
+    if not raw:
+        return None
+    try:
+        ipaddress.ip_address(raw)
+        return raw
+    except ValueError:
+        return None
 
 
 def _ua(request: Request) -> str | None:
@@ -56,6 +70,7 @@ def _ua(request: Request) -> str | None:
 @limiter.limit(settings.rate_limit_auth)
 async def register(
     request: Request,
+    response: Response,
     payload: RegisterRequest,
     db: Session = Depends(get_db),
 ) -> RegisterResponse:
@@ -91,6 +106,7 @@ async def register(
 @limiter.limit(settings.rate_limit_auth)
 def verify_otp(
     request: Request,
+    response: Response,
     payload: VerifyOtpRequest,
     db: Session = Depends(get_db),
 ) -> TokenPair:
@@ -111,6 +127,7 @@ def verify_otp(
 @limiter.limit(settings.rate_limit_auth)
 def login(
     request: Request,
+    response: Response,
     payload: LoginRequest,
     db: Session = Depends(get_db),
 ) -> TokenPair:

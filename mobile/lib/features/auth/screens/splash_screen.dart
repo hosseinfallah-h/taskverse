@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/colors.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -33,19 +33,20 @@ class _SplashScreenState extends State<SplashScreen> {
               width: 96,
               height: 96,
               decoration: BoxDecoration(
-                color: AppTheme.brandPrimary,
+                color: TvColors.brandPrimary,
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.brandAccent.withValues(alpha: 0.3),
+                    color: TvColors.mint.withValues(alpha: 0.30),
                     blurRadius: 40,
+                    offset: const Offset(0, 12),
                   ),
                 ],
               ),
               child: const Icon(
                 Icons.check_circle_outline,
                 size: 48,
-                color: AppTheme.brandSecondary,
+                color: TvColors.sunGold,
               ),
             )
                 .animate()

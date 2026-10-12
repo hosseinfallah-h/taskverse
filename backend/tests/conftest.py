@@ -9,12 +9,7 @@ import os
 from pathlib import Path
 from urllib.parse import urlparse
 
-import psycopg2
-import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
-
+# === MUST be set BEFORE any app import ===
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
 
 TEST_DB_URL = os.getenv(
@@ -22,10 +17,21 @@ TEST_DB_URL = os.getenv(
     "postgresql://postgres:postgres@localhost:5432/taskverse_test",
 )
 os.environ["DATABASE_URL"] = TEST_DB_URL
-os.environ.setdefault("SECRET_KEY", "test-secret-key-please-rotate-in-production")
-os.environ.setdefault("ENV", "test")
-os.environ.setdefault("DEBUG", "true")
-os.environ.setdefault("SMS_PROVIDER", "")
+os.environ["SECRET_KEY"] = "test-secret-key-please-rotate-in-production"
+os.environ["ENV"] = "test"
+os.environ["DEBUG"] = "true"
+os.environ["SMS_PROVIDER"] = ""
+os.environ["SMS_API_KEY"] = ""
+os.environ["SMS_PATTERN_CODE"] = ""
+os.environ["RATE_LIMIT_DEFAULT"] = "10000/minute"
+os.environ["RATE_LIMIT_AUTH"] = "10000/minute"
+
+# Now import app modules (after env is set)
+import psycopg2  # noqa: E402
+import pytest  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+from sqlalchemy import create_engine, text  # noqa: E402
+from sqlalchemy.orm import sessionmaker  # noqa: E402
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -91,6 +97,7 @@ def db(_session_factory):
 
 @pytest.fixture(scope="session")
 def client():
+    """TestClient with app lifecycle."""
     from app.main import app
 
     with TestClient(app) as c:

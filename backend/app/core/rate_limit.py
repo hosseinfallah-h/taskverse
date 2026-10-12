@@ -5,6 +5,7 @@ Rules:
 - Auth endpoints: settings.rate_limit_auth (5/min)
 
 Identity for limiting: X-Forwarded-For (if behind proxy) else client IP.
+Disabled entirely when ENV=test to keep test suites deterministic.
 """
 
 from slowapi import Limiter
@@ -22,8 +23,14 @@ def client_key(request: Request) -> str:
     return get_remote_address(request) or "unknown"
 
 
+def _enabled() -> bool:
+    """Rate limiting is disabled in test env."""
+    return settings.env != "test"
+
+
 limiter = Limiter(
     key_func=client_key,
-    default_limits=[settings.rate_limit_default],
+    default_limits=[settings.rate_limit_default] if _enabled() else [],
     headers_enabled=True,
+    enabled=_enabled(),
 )
