@@ -17,6 +17,7 @@ from app.core.rate_limit import limiter
 from app.modules.auth.router import router as auth_router
 from app.modules.health.router import router as health_router
 from app.modules.meta.router import router as meta_router
+from app.modules.people.router import router as people_router
 from app.modules.projects.router import router as projects_router
 from app.modules.tags.router import router as tags_router
 from app.modules.tasks.router import router as tasks_router
@@ -76,6 +77,7 @@ def create_app() -> FastAPI:
     app.include_router(projects_router)
     app.include_router(tags_router)
     app.include_router(tasks_router)
+    app.include_router(people_router)
 
     return app
 
