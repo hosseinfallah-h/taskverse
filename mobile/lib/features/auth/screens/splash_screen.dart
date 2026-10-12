@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/colors.dart';
 
@@ -14,16 +15,15 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Placeholder — real boot routing comes next session.
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        // TODO: route to login/home based on stored JWT
-      }
+    Future.delayed(const Duration(milliseconds: 1800), () {
+      if (mounted) context.go('/login');
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       body: Center(
         child: Column(
@@ -51,7 +51,11 @@ class _SplashScreenState extends State<SplashScreen> {
             )
                 .animate()
                 .fadeIn(duration: 600.ms)
-                .scale(begin: const Offset(0.8, 0.8), end: const Offset(1, 1)),
+                .scale(
+                  begin: const Offset(0.8, 0.8),
+                  end: const Offset(1, 1),
+                  curve: Curves.easeOutBack,
+                ),
             const SizedBox(height: 24),
             const Text(
               'TaskVerse',
@@ -66,7 +70,7 @@ class _SplashScreenState extends State<SplashScreen> {
               'باغِ کار',
               style: TextStyle(
                 fontSize: 16,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ).animate().fadeIn(delay: 600.ms),
           ],
