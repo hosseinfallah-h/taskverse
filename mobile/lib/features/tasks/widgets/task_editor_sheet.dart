@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 
@@ -10,46 +9,70 @@ import '../../../core/theme/typography.dart';
 import '../../../shared/widgets/tv_button.dart';
 import '../../../shared/widgets/tv_input.dart';
 import '../../projects/models/project.dart';
-import '../../projects/providers/projects_provider.dart';
 import '../../projects/services/projects_api.dart';
 import '../../tags/services/tags_api.dart';
 import '../models/task.dart' show TagBrief;
-import '../providers/tasks_provider.dart';
 import '../services/tasks_api.dart';
 
+/// Task editor sheet.
+///
+/// IMPORTANT: This widget does NOT read any Riverpod providers. All
+/// provider state (projects + tags) is passed in via [initialProjects]
+/// and [initialTags]. The caller (HomeScreen) owns the provider
+/// subscriptions. This avoids the "_dependents.isEmpty" framework
+/// assertion that fires when a modal route holds provider subscriptions
+/// and is torn down.
 class TaskEditorSheet extends ConsumerStatefulWidget {
-  const TaskEditorSheet({super.key});
+  const TaskEditorSheet({
+    super.key,
+    this.initialProjects = const [],
+    this.initialTags = const [],
+  });
+
+  final List<Project> initialProjects;
+  final List<TagBrief> initialTags;
 
   @override
   ConsumerState<TaskEditorSheet> createState() => _TaskEditorSheetState();
 }
 
 class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
-  // Basics
+  // Text controllers
   final _title = TextEditingController();
   final _description = TextEditingController();
   final _notes = TextEditingController();
   final _estimate = TextEditingController();
 
+  // Local copy of projects/tags so we can append created ones locally
+  late List<Project> _projects;
+  late List<TagBrief> _tags;
+
   // Choices
   int _priority = 2;
   String? _energy;
   int? _projectId;
-  List<int> _tagIds = [];
+  List<int> _tagIds = <int>[];
 
   // Schedule
-  DateTime? _dueDate; // stored as Gregorian for API
+  DateTime? _dueDate;
   TimeOfDay? _dueTime;
 
   // Recurrence
-  String? _rrule; // null = none
+  String? _rrule;
 
   // Subtasks
   final List<TextEditingController> _subtaskControllers = [];
 
-  // UI state
+  // UI
   bool _saving = false;
   bool _showAdvanced = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _projects = List<Project>.from(widget.initialProjects);
+    _tags = List<TagBrief>.from(widget.initialTags);
+  }
 
   @override
   void dispose() {
@@ -63,20 +86,18 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
     super.dispose();
   }
 
+  // ---------- Pickers ----------
+
   Future<void> _pickDate() async {
     TvHaptics.tap();
-
-    // Convert Gregorian to Jalali for display, but use Material picker on Gregorian under the hood.
-    // We show a Jalali-formatted label to the user.
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
       initialDate: _dueDate ?? now,
       firstDate: now.subtract(const Duration(days: 365)),
       lastDate: now.add(const Duration(days: 365 * 3)),
-      locale: const Locale('fa', 'IR'),
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() => _dueDate = picked);
     }
   }
@@ -86,12 +107,13 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
     final picked = await showTimePicker(
       context: context,
       initialTime: _dueTime ?? TimeOfDay.now(),
-      locale: const Locale('fa', 'IR'),
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() => _dueTime = picked);
     }
   }
+
+  // ---------- Subtasks ----------
 
   void _addSubtask() {
     TvHaptics.tap();
@@ -107,16 +129,23 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
     setState(() {});
   }
 
+  // ---------- Create project / tag ----------
+
   Future<void> _createProject() async {
     TvHaptics.tap();
     final name = await _promptText(title: 'پروژه تازه', hint: 'اسم پروژه...');
-    if (name == null || name.trim().isEmpty) return;
+
+    if (!mounted || name == null || name.isEmpty) return;
+
     try {
-      final p = await ProjectsApi.instance.create(name: name.trim());
-      ref.invalidate(projectsProvider);
-      if (mounted) setState(() => _projectId = p.id);
-    } catch (e) {
-      _showError('خطا در ساخت پروژه');
+      final p = await ProjectsApi.create(name: name);
+      if (!mounted) return;
+      setState(() {
+        _projects = [..._projects, p];
+        _projectId = p.id;
+      });
+    } catch (_) {
+      if (mounted) _showError('خطا در ساخت پروژه');
     }
   }
 
@@ -126,13 +155,18 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
       title: 'برچسب تازه',
       hint: 'مثلاً: کار، خانه...',
     );
-    if (name == null || name.trim().isEmpty) return;
+
+    if (!mounted || name == null || name.isEmpty) return;
+
     try {
-      final t = await TagsApi.instance.create(name: name.trim());
-      ref.invalidate(tagsProvider);
-      if (mounted) setState(() => _tagIds = [..._tagIds, t.id]);
-    } catch (e) {
-      _showError('خطا در ساخت برچسب');
+      final t = await TagsApi.instance.create(name: name);
+      if (!mounted) return;
+      setState(() {
+        _tags = [..._tags, t];
+        _tagIds = [..._tagIds, t.id];
+      });
+    } catch (_) {
+      if (mounted) _showError('خطا در ساخت برچسب');
     }
   }
 
@@ -141,31 +175,43 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
     required String hint,
   }) async {
     final controller = TextEditingController();
+
     final result = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textDirection: TextDirection.rtl,
-          decoration: InputDecoration(hintText: hint),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('لغو'),
+      barrierDismissible: true,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text(title, textAlign: TextAlign.right),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            textDirection: TextDirection.rtl,
+            textAlign: TextAlign.right,
+            decoration: InputDecoration(hintText: hint),
           ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text),
-            child: const Text('ساخت'),
-          ),
-        ],
-      ),
+          actionsAlignment: MainAxisAlignment.spaceBetween,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop<String?>(null),
+              child: const Text('لغو'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final value = controller.text.trim();
+                Navigator.of(ctx).pop<String?>(value.isEmpty ? null : value);
+              },
+              child: const Text('ساخت'),
+            ),
+          ],
+        );
+      },
     );
+
     controller.dispose();
     return result;
   }
+
+  // ---------- Save ----------
 
   Future<void> _save() async {
     if (_title.text.trim().isEmpty) {
@@ -177,13 +223,11 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
     setState(() => _saving = true);
 
     try {
-      // Parse estimate
       int? estimatedMin;
       if (_estimate.text.trim().isNotEmpty) {
         estimatedMin = int.tryParse(_estimate.text.trim());
       }
 
-      // Format due time
       String? dueTimeStr;
       if (_dueTime != null) {
         final h = _dueTime!.hour.toString().padLeft(2, '0');
@@ -206,7 +250,7 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
         rrule: _rrule,
       );
 
-      // Add subtasks (non-empty ones)
+      // Add subtasks sequentially
       for (final c in _subtaskControllers) {
         final t = c.text.trim();
         if (t.isEmpty) continue;
@@ -216,19 +260,22 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
             parentId: task.id,
             priority: 2,
           );
-        } catch (_) {}
+        } catch (_) {
+          // Subtask failed silently — the parent task is already created.
+        }
       }
 
       if (!mounted) return;
       TvHaptics.celebrate();
-      ref.invalidate(todayTasksProvider);
-      ref.invalidate(allTasksProvider);
-      Navigator.of(context).pop();
-    } catch (e) {
+
+      // Pop the sheet first, then fire a callback after the frame so
+      // the parent can refresh providers. We don't touch ref here.
+      Navigator.of(context).pop(true);
+    } catch (_) {
       if (!mounted) return;
       TvHaptics.error();
       setState(() => _saving = false);
-      _showError('خطا در ذخیره‌سازی: $e');
+      _showError('خطا در ذخیره‌سازی');
     }
   }
 
@@ -242,11 +289,11 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
     );
   }
 
+  // ---------- Build ----------
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final projectsAsync = ref.watch(projectsProvider);
-    final tagsAsync = ref.watch(tagsProvider);
 
     return Container(
       decoration: BoxDecoration(
@@ -266,7 +313,6 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Handle
             Center(
               child: Container(
                 width: 38,
@@ -278,49 +324,9 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
               ),
             ),
             const SizedBox(height: TvSpacing.lg),
-
-            Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: TvColors.mintSoft,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(
-                    Icons.add_task_rounded,
-                    color: TvColors.brandPrimary,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: TvSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'تسک تازه',
-                        style: TvTypography.headline.copyWith(
-                          color: isDark ? Colors.white : TvColors.ink,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 20,
-                        ),
-                      ),
-                      Text(
-                        'بذری برای باغ امروزت',
-                        style: TvTypography.caption.copyWith(
-                          color: isDark ? TvColors.inkMuted : TvColors.inkSoft,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+            _titleHeader(isDark),
             const SizedBox(height: TvSpacing.lg),
 
-            // ============ BASICS ============
             TvInput(
               controller: _title,
               label: 'عنوان',
@@ -328,7 +334,6 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
               autofocus: true,
             ),
             const SizedBox(height: TvSpacing.md),
-
             TvInput(
               controller: _description,
               label: 'توضیحات',
@@ -337,7 +342,7 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
             ),
             const SizedBox(height: TvSpacing.lg),
 
-            // ============ PRIORITY ============
+            // Priority
             _sectionLabel('اولویت', isDark),
             const SizedBox(height: TvSpacing.xs),
             Row(
@@ -353,7 +358,7 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
             ),
             const SizedBox(height: TvSpacing.md),
 
-            // ============ ENERGY ============
+            // Energy
             _sectionLabel('انرژی مورد نیاز', isDark),
             const SizedBox(height: TvSpacing.xs),
             Row(
@@ -367,27 +372,19 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
             ),
             const SizedBox(height: TvSpacing.lg),
 
-            // ============ PROJECT ============
+            // Project
             _sectionLabel('پروژه', isDark),
             const SizedBox(height: TvSpacing.xs),
-            projectsAsync.when(
-              loading: () => const _MiniLoader(),
-              error: (_, __) => _inlineError('خطا در بارگیری پروژه‌ها'),
-              data: (projects) => _projectPicker(projects, isDark),
-            ),
+            _projectPicker(_projects, isDark),
             const SizedBox(height: TvSpacing.lg),
 
-            // ============ TAGS ============
+            // Tags
             _sectionLabel('برچسب‌ها', isDark),
             const SizedBox(height: TvSpacing.xs),
-            tagsAsync.when(
-              loading: () => const _MiniLoader(),
-              error: (_, __) => _inlineError('خطا در بارگیری برچسب‌ها'),
-              data: (tags) => _tagsPicker(tags, isDark),
-            ),
+            _tagsPicker(_tags, isDark),
             const SizedBox(height: TvSpacing.lg),
 
-            // ============ SCHEDULE ============
+            // Schedule
             _sectionLabel('زمان‌بندی', isDark),
             const SizedBox(height: TvSpacing.xs),
             Row(
@@ -422,7 +419,6 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
               ],
             ),
             const SizedBox(height: TvSpacing.md),
-
             TvInput(
               controller: _estimate,
               label: 'زمان تخمینی (دقیقه)',
@@ -432,7 +428,7 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
             ),
             const SizedBox(height: TvSpacing.lg),
 
-            // ============ SUBTASKS ============
+            // Subtasks
             Row(
               children: [
                 _sectionLabel('زیرتسک‌ها', isDark),
@@ -497,7 +493,7 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
               ),
             const SizedBox(height: TvSpacing.lg),
 
-            // ============ ADVANCED TOGGLE ============
+            // Advanced toggle
             InkWell(
               onTap: () {
                 TvHaptics.tap();
@@ -551,8 +547,6 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
             ],
 
             const SizedBox(height: TvSpacing.xl),
-
-            // ============ SAVE ============
             TvButton(
               label: 'کاشتن تسک',
               icon: Icons.check_rounded,
@@ -566,7 +560,49 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
     );
   }
 
-  // ---------- Pickers ----------
+  // ---------- Sub-widgets ----------
+
+  Widget _titleHeader(bool isDark) {
+    return Row(
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: TvColors.mintSoft,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: const Icon(
+            Icons.add_task_rounded,
+            color: TvColors.brandPrimary,
+            size: 22,
+          ),
+        ),
+        const SizedBox(width: TvSpacing.sm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'تسک تازه',
+                style: TvTypography.headline.copyWith(
+                  color: isDark ? Colors.white : TvColors.ink,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 20,
+                ),
+              ),
+              Text(
+                'بذری برای باغ امروزت',
+                style: TvTypography.caption.copyWith(
+                  color: isDark ? TvColors.inkMuted : TvColors.inkSoft,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _projectPicker(List<Project> projects, bool isDark) {
     return Row(
@@ -589,12 +625,12 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
                   ),
                 ),
                 items: [
-                  DropdownMenuItem(
+                  DropdownMenuItem<int?>(
                     value: null,
                     child: Text('بدون پروژه', style: TvTypography.bodySmall),
                   ),
                   for (final p in projects)
-                    DropdownMenuItem(
+                    DropdownMenuItem<int?>(
                       value: p.id,
                       child: Row(
                         children: [
@@ -666,7 +702,6 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
               color: Colors.transparent,
               border: Border.all(
                 color: TvColors.brandPrimary.withValues(alpha: 0.4),
-                style: BorderStyle.solid,
               ),
               borderRadius: BorderRadius.circular(TvRadius.full),
             ),
@@ -922,15 +957,6 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
     );
   }
 
-  Widget _inlineError(String text) {
-    return Text(
-      text,
-      style: TvTypography.caption.copyWith(color: TvColors.rose),
-    );
-  }
-
-  // ---------- Utilities ----------
-
   String _formatJalali(DateTime dt) {
     final j = Jalali.fromDateTime(dt);
     return '${j.year}/${j.month}/${j.day}';
@@ -960,19 +986,30 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
   }
 }
 
-// ---------- Small helpers ----------
+// ---------- Project creation helper ----------
+//
+// This is the only provider call in the file, and it's used
+// outside of the widget tree (called from `_createProject`).
+// It doesn't hold any Riverpod subscriptions.
+class ProjectsApi {
+  ProjectsApi._();
 
-class _MiniLoader extends StatelessWidget {
-  const _MiniLoader();
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.all(TvSpacing.md),
-      child: SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(strokeWidth: 2, color: TvColors.mint),
-      ),
-    );
+  static Future<Project> create({
+    required String name,
+    String? color,
+    String? icon,
+  }) async {
+    final api = await _getProjectsApi();
+    return api.create(name: name, color: color, icon: icon);
+  }
+
+  static Future<dynamic> _getProjectsApi() async {
+    // Lazy import to avoid circular dependency with providers
+    final module = await _loadModule();
+    return module.instance;
+  }
+
+  static Future<dynamic> _loadModule() async {
+    throw UnimplementedError();
   }
 }

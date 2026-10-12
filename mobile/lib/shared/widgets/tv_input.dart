@@ -108,11 +108,11 @@ class TvInput extends StatelessWidget {
       );
     }
 
+    final multiline = (maxLines ?? 1) > 1;
     final effectiveMaxLines = expands ? null : (obscure ? 1 : (maxLines ?? 1));
     final effectiveMinLines = expands
         ? null
         : (multiline ? (minLines ?? maxLines ?? 1) : null);
-    final multiline = (maxLines ?? 1) > 1;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

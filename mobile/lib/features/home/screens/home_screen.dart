@@ -1,8 +1,8 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../projects/providers/projects_provider.dart';
 
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/haptics.dart';
@@ -29,11 +29,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _tab = 0;
   int _filterIndex = 0;
 
-  static const List<String> _filters = [
-    'همه',
-    'در جریان',
-    'انجام‌شده',
-  ];
+  static const List<String> _filters = ['همه', 'در جریان', 'انجام‌شده'];
 
   @override
   Widget build(BuildContext context) {
@@ -65,10 +61,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   begin: Alignment.topRight,
                   end: Alignment.bottomLeft,
                   colors: isDark
-                      ? const [
-                          TvColors.brandPrimaryDeep,
-                          TvColors.night,
-                        ]
+                      ? const [TvColors.brandPrimaryDeep, TvColors.night]
                       : const [
                           TvColors.brandPrimary,
                           TvColors.brandPrimaryDeep,
@@ -93,9 +86,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      TvColors.mint.withValues(
-                        alpha: isDark ? 0.14 : 0.20,
-                      ),
+                      TvColors.mint.withValues(alpha: isDark ? 0.14 : 0.20),
                       TvColors.mint.withValues(alpha: 0),
                     ],
                   ),
@@ -108,8 +99,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             bottom: false,
             child: RefreshIndicator(
               color: TvColors.brandPrimary,
-              backgroundColor:
-                  isDark ? TvColors.nightSoft : TvColors.paper,
+              backgroundColor: isDark ? TvColors.nightSoft : TvColors.paper,
               onRefresh: _refreshDashboard,
               child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(
@@ -124,20 +114,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       0,
                     ),
                     sliver: SliverList(
-                      delegate: SliverChildListDelegate(
-                        [
-                          _buildHeader(firstName, isDark),
-                          const SizedBox(height: TvSpacing.lg),
-                          _buildProgressCard(isDark),
-                          const SizedBox(height: TvSpacing.xl),
-                          _buildTaskSectionHeading(isDark),
-                          const SizedBox(height: TvSpacing.md),
-                          _buildFilters(isDark),
-                          const SizedBox(height: TvSpacing.md),
-                          _buildTaskList(isDark),
-                          const SizedBox(height: 150),
-                        ],
-                      ),
+                      delegate: SliverChildListDelegate([
+                        _buildHeader(firstName, isDark),
+                        const SizedBox(height: TvSpacing.lg),
+                        _buildProgressCard(isDark),
+                        const SizedBox(height: TvSpacing.xl),
+                        _buildTaskSectionHeading(isDark),
+                        const SizedBox(height: TvSpacing.md),
+                        _buildFilters(isDark),
+                        const SizedBox(height: TvSpacing.md),
+                        _buildTaskList(isDark),
+                        const SizedBox(height: 150),
+                      ]),
                     ),
                   ),
                 ],
@@ -149,24 +137,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             left: TvSpacing.md,
             right: TvSpacing.md,
             bottom: TvSpacing.md,
-            child: TvBottomNav(
-              currentIndex: _tab,
-              onTap: (index) {
-                if (index == _tab) return;
+            child:
+                TvBottomNav(
+                      currentIndex: _tab,
+                      onTap: (index) {
+                        if (index == _tab) return;
 
-                TvHaptics.tap();
-                setState(() => _tab = index);
-              },
-              onFabTap: _openEditor,
-            )
-                .animate()
-                .fadeIn(duration: 450.ms)
-                .slideY(
-                  begin: 0.18,
-                  end: 0,
-                  duration: 450.ms,
-                  curve: Curves.easeOutCubic,
-                ),
+                        TvHaptics.tap();
+                        setState(() => _tab = index);
+                      },
+                      onFabTap: _openEditor,
+                    )
+                    .animate()
+                    .fadeIn(duration: 450.ms)
+                    .slideY(
+                      begin: 0.18,
+                      end: 0,
+                      duration: 450.ms,
+                      curve: Curves.easeOutCubic,
+                    ),
           ),
         ],
       ),
@@ -188,56 +177,52 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildHeader(String firstName, bool isDark) {
     return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    _greetingIcon(),
-                    size: 17,
-                    color: TvColors.mint,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(_greetingIcon(), size: 17, color: TvColors.mint),
+                      const SizedBox(width: TvSpacing.xs),
+                      Text(
+                        _greetingByTime(),
+                        style: TvTypography.bodySmall.copyWith(
+                          color: Colors.white.withValues(alpha: 0.76),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: TvSpacing.xs),
+                  const SizedBox(height: TvSpacing.xs),
                   Text(
-                    _greetingByTime(),
+                    firstName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TvTypography.headline.copyWith(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      height: 1.35,
+                    ),
+                  ),
+                  const SizedBox(height: TvSpacing.xs),
+                  Text(
+                    'هر قدم کوچیک، یک رشد بزرگه.',
                     style: TvTypography.bodySmall.copyWith(
-                      color: Colors.white.withValues(alpha: 0.76),
-                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withValues(alpha: 0.78),
+                      height: 1.6,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: TvSpacing.xs),
-              Text(
-                firstName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TvTypography.headline.copyWith(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  height: 1.35,
-                ),
-              ),
-              const SizedBox(height: TvSpacing.xs),
-              Text(
-                'هر قدم کوچیک، یک رشد بزرگه.',
-                style: TvTypography.bodySmall.copyWith(
-                  color: Colors.white.withValues(alpha: 0.78),
-                  height: 1.6,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: TvSpacing.md),
-        _buildGardenMark(),
-      ],
-    )
+            ),
+            const SizedBox(width: TvSpacing.md),
+            _buildGardenMark(),
+          ],
+        )
         .animate()
         .fadeIn(duration: 400.ms)
         .slideX(
@@ -258,9 +243,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.18),
-          ),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.08),
@@ -284,11 +267,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
             ),
-            const Icon(
-              Icons.spa_rounded,
-              size: 31,
-              color: TvColors.mint,
-            ),
+            const Icon(Icons.spa_rounded, size: 31, color: TvColors.mint),
           ],
         ),
       ),
@@ -325,200 +304,201 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final mutedColor = isDark ? TvColors.inkMuted : TvColors.inkSoft;
 
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(TvSpacing.lg),
-      decoration: BoxDecoration(
-        color: isDark ? TvColors.nightSoft : TvColors.paper,
-        borderRadius: BorderRadius.circular(TvRadius.xl + 2),
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.07)
-              : TvColors.brandPrimary.withValues(alpha: 0.09),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: TvColors.brandPrimary.withValues(
-              alpha: isDark ? 0.08 : 0.09,
+          width: double.infinity,
+          padding: const EdgeInsets.all(TvSpacing.lg),
+          decoration: BoxDecoration(
+            color: isDark ? TvColors.nightSoft : TvColors.paper,
+            borderRadius: BorderRadius.circular(TvRadius.xl + 2),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.07)
+                  : TvColors.brandPrimary.withValues(alpha: 0.09),
             ),
-            blurRadius: 32,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'باغت چطور پیش می‌ره؟',
-                      style: TvTypography.title.copyWith(
-                        color: textColor,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: TvSpacing.xxs),
-                    Text(
-                      'رشدت رو قدم‌به‌قدم دنبال کن',
-                      style: TvTypography.caption.copyWith(
-                        color: mutedColor,
-                      ),
-                    ),
-                  ],
+            boxShadow: [
+              BoxShadow(
+                color: TvColors.brandPrimary.withValues(
+                  alpha: isDark ? 0.08 : 0.09,
                 ),
+                blurRadius: 32,
+                offset: const Offset(0, 12),
               ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'باغت چطور پیش می‌ره؟',
+                          style: TvTypography.title.copyWith(
+                            color: textColor,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: TvSpacing.xxs),
+                        Text(
+                          'رشدت رو قدم‌به‌قدم دنبال کن',
+                          style: TvTypography.caption.copyWith(
+                            color: mutedColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: TvSpacing.sm,
+                      vertical: TvSpacing.xs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: TvColors.mint.withValues(
+                        alpha: isDark ? 0.13 : 0.18,
+                      ),
+                      borderRadius: BorderRadius.circular(TvRadius.full),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.eco_rounded,
+                          color: TvColors.brandPrimary,
+                          size: 16,
+                        ),
+                        const SizedBox(width: TvSpacing.xxs),
+                        Text(
+                          'سطح ${_fa(progress.level.toString())}',
+                          style: TvTypography.caption.copyWith(
+                            color: TvColors.brandPrimary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: TvSpacing.lg),
+
+              // Progress ring and the daily/weekly summaries.
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final compact = constraints.maxWidth < 340;
+
+                  final ring = Center(
+                    child: TvProgressRing(
+                      todayRatio: progress.todayRatio,
+                      weekRatio: progress.weekRatio,
+                      size: compact ? 112 : 124,
+                      innerStroke: 8,
+                      outerStroke: 5,
+                      innerTrack: isDark
+                          ? TvColors.nightElevated
+                          : TvColors.brandPrimarySoft,
+                      outerTrack: isDark
+                          ? TvColors.nightElevated
+                          : TvColors.sunGoldSoft,
+                    ),
+                  );
+
+                  final details = Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildProgressLegend(
+                        color: TvColors.mint,
+                        label: 'امروز',
+                        value:
+                            '${_fa(progress.todayDone.toString())} از ${_fa(progress.todayTotal.toString())}',
+                        isDark: isDark,
+                      ),
+                      const SizedBox(height: TvSpacing.md),
+                      _buildProgressLegend(
+                        color: TvColors.sunGold,
+                        label: 'این هفته',
+                        value:
+                            '${_fa(progress.weekDone.toString())} از ${_fa(progress.weekTotal.toString())}',
+                        isDark: isDark,
+                      ),
+                      const SizedBox(height: TvSpacing.lg),
+                      _buildXpProgress(
+                        xp: progress.xp,
+                        levelProgress: progress.levelProgress,
+                        isDark: isDark,
+                      ),
+                    ],
+                  );
+
+                  if (compact) {
+                    return Column(
+                      children: [
+                        ring,
+                        const SizedBox(height: TvSpacing.lg),
+                        details,
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SizedBox(width: 124, child: ring),
+                      const SizedBox(width: TvSpacing.lg),
+                      Expanded(child: details),
+                    ],
+                  );
+                },
+              ),
+
+              const SizedBox(height: TvSpacing.lg),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: TvSpacing.sm,
-                  vertical: TvSpacing.xs,
+                height: 1,
+                color: (isDark ? Colors.white : TvColors.ink).withValues(
+                  alpha: 0.08,
                 ),
-                decoration: BoxDecoration(
-                  color: TvColors.mint.withValues(
-                    alpha: isDark ? 0.13 : 0.18,
+              ),
+              const SizedBox(height: TvSpacing.md),
+
+              // Three compact metrics with consistent alignment.
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStat(
+                      icon: Icons.eco_rounded,
+                      value: _fa(progress.sprouts.toString()),
+                      label: 'جوانه‌ها',
+                      tint: TvColors.mint,
+                      isDark: isDark,
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(TvRadius.full),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.eco_rounded,
-                      color: TvColors.brandPrimary,
-                      size: 16,
+                  _buildStatDivider(isDark),
+                  Expanded(
+                    child: _buildStat(
+                      icon: Icons.local_fire_department_rounded,
+                      value: _fa(progress.streak.toString()),
+                      label: 'روز متوالی',
+                      tint: TvColors.sunGold,
+                      isDark: isDark,
                     ),
-                    const SizedBox(width: TvSpacing.xxs),
-                    Text(
-                      'سطح ${_fa(progress.level.toString())}',
-                      style: TvTypography.caption.copyWith(
-                        color: TvColors.brandPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
+                  ),
+                  _buildStatDivider(isDark),
+                  Expanded(
+                    child: _buildStat(
+                      icon: Icons.check_circle_outline_rounded,
+                      value: _fa(progress.todayDone.toString()),
+                      label: 'انجام امروز',
+                      tint: TvColors.sky,
+                      isDark: isDark,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: TvSpacing.lg),
-
-          // Progress ring and the daily/weekly summaries.
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final compact = constraints.maxWidth < 340;
-
-              final ring = Center(
-                child: TvProgressRing(
-                  todayRatio: progress.todayRatio,
-                  weekRatio: progress.weekRatio,
-                  size: compact ? 112 : 124,
-                  innerStroke: 8,
-                  outerStroke: 5,
-                  innerTrack: isDark
-                      ? TvColors.nightElevated
-                      : TvColors.brandPrimarySoft,
-                  outerTrack: isDark
-                      ? TvColors.nightElevated
-                      : TvColors.sunGoldSoft,
-                ),
-              );
-
-              final details = Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildProgressLegend(
-                    color: TvColors.mint,
-                    label: 'امروز',
-                    value:
-                        '${_fa(progress.todayDone.toString())} از ${_fa(progress.todayTotal.toString())}',
-                    isDark: isDark,
-                  ),
-                  const SizedBox(height: TvSpacing.md),
-                  _buildProgressLegend(
-                    color: TvColors.sunGold,
-                    label: 'این هفته',
-                    value:
-                        '${_fa(progress.weekDone.toString())} از ${_fa(progress.weekTotal.toString())}',
-                    isDark: isDark,
-                  ),
-                  const SizedBox(height: TvSpacing.lg),
-                  _buildXpProgress(
-                    xp: progress.xp,
-                    levelProgress: progress.levelProgress,
-                    isDark: isDark,
-                  ),
-                ],
-              );
-
-              if (compact) {
-                return Column(
-                  children: [
-                    ring,
-                    const SizedBox(height: TvSpacing.lg),
-                    details,
-                  ],
-                );
-              }
-
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SizedBox(width: 124, child: ring),
-                  const SizedBox(width: TvSpacing.lg),
-                  Expanded(child: details),
-                ],
-              );
-            },
-          ),
-
-          const SizedBox(height: TvSpacing.lg),
-          Container(
-            height: 1,
-            color: (isDark ? Colors.white : TvColors.ink)
-                .withValues(alpha: 0.08),
-          ),
-          const SizedBox(height: TvSpacing.md),
-
-          // Three compact metrics with consistent alignment.
-          Row(
-            children: [
-              Expanded(
-                child: _buildStat(
-                  icon: Icons.eco_rounded,
-                  value: _fa(progress.sprouts.toString()),
-                  label: 'جوانه‌ها',
-                  tint: TvColors.mint,
-                  isDark: isDark,
-                ),
-              ),
-              _buildStatDivider(isDark),
-              Expanded(
-                child: _buildStat(
-                  icon: Icons.local_fire_department_rounded,
-                  value: _fa(progress.streak.toString()),
-                  label: 'روز متوالی',
-                  tint: TvColors.sunGold,
-                  isDark: isDark,
-                ),
-              ),
-              _buildStatDivider(isDark),
-              Expanded(
-                child: _buildStat(
-                  icon: Icons.check_circle_outline_rounded,
-                  value: _fa(progress.todayDone.toString()),
-                  label: 'انجام امروز',
-                  tint: TvColors.sky,
-                  isDark: isDark,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    )
+        )
         .animate()
         .fadeIn(duration: 500.ms, delay: 80.ms)
         .slideY(
@@ -547,10 +527,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             color: color,
             shape: BoxShape.circle,
             boxShadow: [
-              BoxShadow(
-                color: color.withValues(alpha: 0.25),
-                blurRadius: 7,
-              ),
+              BoxShadow(color: color.withValues(alpha: 0.25), blurRadius: 7),
             ],
           ),
         ),
@@ -558,9 +535,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         Expanded(
           child: Text(
             label,
-            style: TvTypography.bodySmall.copyWith(
-              color: mutedColor,
-            ),
+            style: TvTypography.bodySmall.copyWith(color: mutedColor),
           ),
         ),
         const SizedBox(width: TvSpacing.xs),
@@ -589,17 +564,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       children: [
         Row(
           children: [
-            Icon(
-              Icons.bolt_rounded,
-              size: 17,
-              color: TvColors.sunGold,
-            ),
+            Icon(Icons.bolt_rounded, size: 17, color: TvColors.sunGold),
             const SizedBox(width: TvSpacing.xxs),
             Text(
               'امتیاز تجربه',
-              style: TvTypography.caption.copyWith(
-                color: mutedColor,
-              ),
+              style: TvTypography.caption.copyWith(color: mutedColor),
             ),
             const Spacer(),
             Text(
@@ -615,10 +584,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ClipRRect(
           borderRadius: BorderRadius.circular(TvRadius.full),
           child: TweenAnimationBuilder<double>(
-            tween: Tween<double>(
-              begin: 0,
-              end: progressValue,
-            ),
+            tween: Tween<double>(begin: 0, end: progressValue),
             duration: const Duration(milliseconds: 800),
             curve: Curves.easeOutCubic,
             builder: (context, value, child) {
@@ -628,9 +594,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 backgroundColor: isDark
                     ? TvColors.nightElevated
                     : TvColors.brandPrimarySoft.withValues(alpha: 0.65),
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  TvColors.mint,
-                ),
+                valueColor: const AlwaysStoppedAnimation<Color>(TvColors.mint),
               );
             },
           ),
@@ -655,11 +619,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             color: tint.withValues(alpha: isDark ? 0.12 : 0.17),
             borderRadius: BorderRadius.circular(13),
           ),
-          child: Icon(
-            icon,
-            size: 19,
-            color: tint,
-          ),
+          child: Icon(icon, size: 19, color: tint),
         ),
         const SizedBox(height: TvSpacing.xs),
         Text(
@@ -687,8 +647,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       width: 1,
       height: 52,
       margin: const EdgeInsets.symmetric(horizontal: TvSpacing.xs),
-      color: (isDark ? Colors.white : TvColors.ink)
-          .withValues(alpha: 0.08),
+      color: (isDark ? Colors.white : TvColors.ink).withValues(alpha: 0.08),
     );
   }
 
@@ -717,9 +676,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const SizedBox(height: TvSpacing.xxs),
               Text(
                 'با یک قدم کوچیک شروع کن',
-                style: TvTypography.bodySmall.copyWith(
-                  color: mutedColor,
-                ),
+                style: TvTypography.bodySmall.copyWith(color: mutedColor),
               ),
             ],
           ),
@@ -738,11 +695,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.add_rounded,
-                    color: Colors.white,
-                    size: 19,
-                  ),
+                  const Icon(Icons.add_rounded, color: Colors.white, size: 19),
                   const SizedBox(width: TvSpacing.xs),
                   Text(
                     'تسک تازه',
@@ -815,27 +768,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             border: Border.all(
               color: selected
                   ? TvColors.mint.withValues(alpha: 0.35)
-                  : (isDark ? Colors.white : TvColors.ink)
-                      .withValues(alpha: 0.07),
+                  : (isDark ? Colors.white : TvColors.ink).withValues(
+                      alpha: 0.07,
+                    ),
             ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               if (selected) ...[
-                const Icon(
-                  Icons.check_rounded,
-                  size: 15,
-                  color: TvColors.mint,
-                ),
+                const Icon(Icons.check_rounded, size: 15, color: TvColors.mint),
                 const SizedBox(width: TvSpacing.xs),
               ],
               Text(
                 label,
                 style: TvTypography.label.copyWith(
                   color: foreground,
-                  fontWeight:
-                      selected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
             ],
@@ -866,9 +815,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           children: [
             for (final task in filteredTasks)
               Padding(
-                padding: const EdgeInsets.only(
-                  bottom: TvSpacing.sm,
-                ),
+                padding: const EdgeInsets.only(bottom: TvSpacing.sm),
                 child: TaskCard(
                   key: ValueKey(task.id),
                   task: task,
@@ -876,10 +823,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     final newStatus = task.isDone ? 'todo' : 'done';
 
                     try {
-                      await TasksApi.instance.setStatus(
-                        task.id,
-                        newStatus,
-                      );
+                      await TasksApi.instance.setStatus(task.id, newStatus);
                     } catch (_) {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -892,12 +836,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                         );
                       }
+                      return;
                     }
 
                     if (!mounted) return;
 
-                    ref.invalidate(todayTasksProvider);
-                    ref.invalidate(allTasksProvider);
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      ref.invalidate(todayTasksProvider);
+                      ref.invalidate(allTasksProvider);
+                    });
                   },
                   onTap: () {
                     TvHaptics.tap();
@@ -976,34 +923,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final title = isAllFilter
         ? 'باغت آماده‌ی کاشت است'
         : isDoneFilter
-            ? 'هنوز کاری کامل نشده'
-            : 'همه‌چیز رو به راهه';
+        ? 'هنوز کاری کامل نشده'
+        : 'همه‌چیز رو به راهه';
 
     final message = isAllFilter
         ? 'یه کار کوچیک تعریف کن و اولین جوانه‌ی مسیرت رو بکار.'
         : isDoneFilter
-            ? 'وقتی اولین کارت رو انجام بدی، اینجا می‌بینیش.'
-            : 'فعلاً کاری در جریان نیست؛ می‌تونی کمی استراحت کنی یا کار تازه‌ای بسازی.';
+        ? 'وقتی اولین کارت رو انجام بدی، اینجا می‌بینیش.'
+        : 'فعلاً کاری در جریان نیست؛ می‌تونی کمی استراحت کنی یا کار تازه‌ای بسازی.';
 
     return _buildMessageSurface(
-      isDark: isDark,
-      icon: isAllFilter
-          ? Icons.spa_rounded
-          : isDoneFilter
+          isDark: isDark,
+          icon: isAllFilter
+              ? Icons.spa_rounded
+              : isDoneFilter
               ? Icons.park_rounded
               : Icons.self_improvement_rounded,
-      iconColor: TvColors.brandPrimary,
-      title: title,
-      message: message,
-      action: isAllFilter || !isDoneFilter
-          ? TvButton(
-              label: isAllFilter ? 'ساخت اولین تسک' : 'ساخت تسک تازه',
-              icon: Icons.add_rounded,
-              onPressed: _openEditor,
-            )
-          : null,
-      showDecorativeDots: true,
-    )
+          iconColor: TvColors.brandPrimary,
+          title: title,
+          message: message,
+          action: isAllFilter || !isDoneFilter
+              ? TvButton(
+                  label: isAllFilter ? 'ساخت اولین تسک' : 'ساخت تسک تازه',
+                  icon: Icons.add_rounded,
+                  onPressed: _openEditor,
+                )
+              : null,
+          showDecorativeDots: true,
+        )
         .animate()
         .fadeIn(duration: 450.ms, delay: 100.ms)
         .slideY(
@@ -1066,9 +1013,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        TvColors.mint.withValues(
-                          alpha: isDark ? 0.15 : 0.24,
-                        ),
+                        TvColors.mint.withValues(alpha: isDark ? 0.15 : 0.24),
                         TvColors.mint.withValues(alpha: 0),
                       ],
                     ),
@@ -1099,14 +1044,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: isDark
-                          ? [
-                              TvColors.nightElevated,
-                              TvColors.brandPrimaryDeep,
-                            ]
-                          : [
-                              TvColors.brandPrimarySoft,
-                              TvColors.mintSoft,
-                            ],
+                          ? [TvColors.nightElevated, TvColors.brandPrimaryDeep]
+                          : [TvColors.brandPrimarySoft, TvColors.mintSoft],
                     ),
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(
@@ -1143,10 +1082,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
           ),
-          if (action != null) ...[
-            const SizedBox(height: TvSpacing.lg),
-            action,
-          ],
+          if (action != null) ...[const SizedBox(height: TvSpacing.lg), action],
         ],
       ),
     );
@@ -1159,28 +1095,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void _openEditor() {
     TvHaptics.tap();
 
+    // Fetch projects + tags BEFORE opening the sheet, then pass them in.
+    // This avoids holding Riverpod subscriptions inside the modal route,
+    // which was causing "_dependents.isEmpty" assertions on close.
+    final projects = ref.read(projectsProvider).value ?? const [];
+    final tags = ref.read(tagsProvider).value ?? const [];
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const TaskEditorSheet(),
-    );
+      builder: (_) =>
+          TaskEditorSheet(initialProjects: projects, initialTags: tags),
+    ).then((_) {
+      if (!mounted) return;
+      // Refresh after sheet closes, on the next frame.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ref.invalidate(projectsProvider);
+        ref.invalidate(tagsProvider);
+        ref.invalidate(todayTasksProvider);
+        ref.invalidate(allTasksProvider);
+      });
+    });
   }
 
   String _fa(String value) {
-    const digits = [
-      '۰',
-      '۱',
-      '۲',
-      '۳',
-      '۴',
-      '۵',
-      '۶',
-      '۷',
-      '۸',
-      '۹',
-    ];
+    const digits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
 
     return value.split('').map((character) {
       final digit = int.tryParse(character);
@@ -1190,10 +1132,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 }
 
 class _AccentDot extends StatelessWidget {
-  const _AccentDot({
-    required this.color,
-    required this.size,
-  });
+  const _AccentDot({required this.color, required this.size});
 
   final Color color;
   final double size;
