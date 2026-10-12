@@ -130,7 +130,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                 Expanded(
                   flex: 2,
                   child: FilledButton(
-                    onPressed: () => Navigator.of(_).pop(true),
+                    onPressed: () => Navigator.of(context).pop(true),
                     style: FilledButton.styleFrom(
                       backgroundColor: TvColors.rose,
                       padding: const EdgeInsets.symmetric(vertical: 14),
