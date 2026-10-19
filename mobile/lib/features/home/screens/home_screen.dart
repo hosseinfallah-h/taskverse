@@ -189,11 +189,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             bottom: TvSpacing.md,
             child:
                 TvBottomNav(
-                      currentIndex: _tab,
+                      currentIndex: 0,
                       onTap: (index) {
-                        if (index == _tab) return;
                         TvHaptics.tap();
-                        setState(() => _tab = index);
+                        if (index == 0) return;
+                        if (index == 1) {
+                          context.push('/projects');
+                        } else if (index == 2) {
+                          context.push('/calendar');
+                        } else if (index == 3) {
+                          context.push('/me');
+                        }
                       },
                       onFabTap: _openEditor,
                     )
