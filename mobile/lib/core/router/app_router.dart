@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,6 +8,7 @@ import '../../features/auth/screens/otp_screen.dart';
 import '../../features/auth/screens/splash_screen.dart';
 import '../../features/calendar/screens/calendar_screen.dart';
 import '../../features/home/screens/home_screen.dart';
+import '../../features/home/screens/home_shell.dart';
 import '../../features/profile/screens/me_screen.dart';
 import '../../features/projects/screens/projects_screen.dart';
 import '../../features/tasks/models/task.dart';
@@ -40,10 +42,27 @@ final routerProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
-      GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
-      GoRoute(path: '/projects', builder: (_, __) => const ProjectsScreen()),
-      GoRoute(path: '/calendar', builder: (_, __) => const CalendarScreen()),
-      GoRoute(path: '/me', builder: (_, __) => const MeScreen()),
+
+      // ---- Shell with global bottom nav ----
+      ShellRoute(
+        builder: (context, state, child) {
+          return HomeShell(location: state.matchedLocation, child: child);
+        },
+        routes: [
+          GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
+          GoRoute(
+            path: '/projects',
+            builder: (_, __) => const ProjectsScreen(),
+          ),
+          GoRoute(
+            path: '/calendar',
+            builder: (_, __) => const CalendarScreen(),
+          ),
+          GoRoute(path: '/me', builder: (_, __) => const MeScreen()),
+        ],
+      ),
+
+      // ---- Task detail (full screen, no bottom nav) ----
       GoRoute(
         path: '/task',
         builder: (_, state) {

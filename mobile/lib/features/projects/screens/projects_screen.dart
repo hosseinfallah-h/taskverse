@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/colors.dart';
 import '../../../core/theme/haptics.dart';
 import '../../../core/theme/spacing.dart';
 import '../../../core/theme/theme_ext.dart';
@@ -46,146 +47,230 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
 
   Future<String?> _promptName() async {
     final controller = TextEditingController();
-    final result = await showDialog<String>(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final result = await showModalBottomSheet<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('پروژه تازه', textAlign: TextAlign.right),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textDirection: TextDirection.rtl,
-          textAlign: TextAlign.right,
-          decoration: const InputDecoration(hintText: 'اسم پروژه...'),
-        ),
-        actionsAlignment: MainAxisAlignment.spaceBetween,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop<String?>(null),
-            child: const Text('لغو'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final v = controller.text.trim();
-              Navigator.of(ctx).pop<String?>(v.isEmpty ? null : v);
-            },
-            child: const Text('ساخت'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    return result;
-  }
+      isScrollControlled: true,
+      useRootNavigator: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        // We read insets INSIDE the sheet so keyboard height is current.
+        final bottomInset = MediaQuery.viewInsetsOf(ctx).bottom;
+        final safeBottom = MediaQuery.viewPaddingOf(ctx).bottom;
 
-  @override
-  Widget build(BuildContext context) {
-    final asyncProjects = ref.watch(projectsProvider);
-    final brand = context.brand;
-
-    return Scaffold(
-      backgroundColor: context.bg,
-      body: SafeArea(
-        child: RefreshIndicator(
-          color: brand,
-          backgroundColor: context.surface,
-          onRefresh: _refresh,
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(
-              parent: BouncingScrollPhysics(),
+        return Padding(
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(ctx).height * 0.85,
             ),
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(
-                  TvSpacing.md,
-                  TvSpacing.lg,
-                  TvSpacing.md,
-                  TvSpacing.md,
-                ),
-                sliver: SliverToBoxAdapter(
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'پروژه‌ها',
-                              style: TvTypography.headline.copyWith(
-                                color: context.ink,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'هر پروژه، یک باغچه در باغ بزرگ‌تر توست.',
-                              style: TvTypography.bodySmall.copyWith(
-                                color: context.inkSoft,
-                              ),
-                            ),
-                          ],
+            padding: EdgeInsets.fromLTRB(
+              TvSpacing.lg,
+              TvSpacing.md,
+              TvSpacing.lg,
+              safeBottom + TvSpacing.lg,
+            ),
+            decoration: BoxDecoration(
+              color: isDark ? TvColors.nightSoft : TvColors.paper,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(TvRadius.xl),
+              ),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 38,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color:
+                            TvColors.inkMuted.withValues(alpha: 0.45),
+                        borderRadius:
+                            BorderRadius.circular(TvRadius.full),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: TvSpacing.lg),
+                  Text(
+                    'پروژه تازه',
+                    textAlign: TextAlign.right,
+                    style: TvTypography.headline.copyWith(
+                      color: isDark ? Colors.white : TvColors.ink,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: TvSpacing.xs),
+                  Text(
+                    'اسم پروژه‌ت رو انتخاب کن',
+                    textAlign: TextAlign.right,
+                    style: TvTypography.bodySmall.copyWith(
+                      color: isDark
+                          ? TvColors.inkMuted
+                          : TvColors.inkSoft,
+                    ),
+                  ),
+                  const SizedBox(height: TvSpacing.lg),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    textDirection: TextDirection.rtl,
+                    textAlign: TextAlign.right,
+                    style: TvTypography.body.copyWith(
+                      color: isDark ? Colors.white : TvColors.ink,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'مثلاً: محتوای کانال',
+                      filled: true,
+                      fillColor: isDark
+                          ? TvColors.nightElevated
+                          : TvColors.sand,
+                      border: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(TvRadius.md),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(TvRadius.md),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(TvRadius.md),
+                        borderSide: BorderSide(
+                          color: TvColors.mint
+                              .withValues(alpha: 0.6),
+                          width: 1.5,
                         ),
                       ),
-                      Material(
-                        color: brand,
-                        borderRadius: BorderRadius.circular(TvRadius.full),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(TvRadius.full),
-                          onTap: _createProject,
-                          child: const Padding(
-                            padding: EdgeInsets.all(12),
-                            child: Icon(
-                              Icons.add_rounded,
+                      contentPadding:
+                          const EdgeInsets.symmetric(
+                        horizontal: TvSpacing.md,
+                        vertical: 16,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: TvSpacing.lg),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.of(ctx)
+                              .pop<String?>(null),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 14,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                TvRadius.md,
+                              ),
+                              side: BorderSide(
+                                color: TvColors.inkMuted
+                                    .withValues(alpha: 0.25),
+                              ),
+                            ),
+                          ),
+                          child: Text(
+                            'لغو',
+                            style: TvTypography.label.copyWith(
+                              color: TvColors.inkMuted,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: TvSpacing.sm),
+                      Expanded(
+                        flex: 2,
+                        child: FilledButton(
+                          onPressed: () {
+                            final v = controller.text.trim();
+                            Navigator.of(ctx).pop<String?>(
+                              v.isEmpty ? null : v,
+                            );
+                          },
+                          style: FilledButton.styleFrom(
+                            backgroundColor: TvColors.brandPrimary,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 14,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                TvRadius.md,
+                              ),
+                            ),
+                          ),
+                          child: Text(
+                            'ساخت',
+                            style: TvTypography.label.copyWith(
                               color: Colors.white,
-                              size: 22,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
                       ),
                     ],
                   ),
-                ).animate().fadeIn(duration: 400.ms),
+                ],
               ),
+            ),
+          ),
+        );
+      },
+    );
 
+    await Future<void>.delayed(Duration.zero);
+    controller.dispose();
+    return result;
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    final asyncProjects = ref.watch(projectsProvider);
+
+    return Scaffold(
+      backgroundColor: context.bg,
+      body: SafeArea(
+        child: RefreshIndicator(
+          color: context.brand,
+          backgroundColor: context.surface,
+          onRefresh: _refresh,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            padding: const EdgeInsets.fromLTRB(
+              TvSpacing.md,
+              TvSpacing.lg,
+              TvSpacing.md,
+              120,
+            ),
+            children: [
+              _header(),
+              const SizedBox(height: TvSpacing.lg),
               asyncProjects.when(
-                loading: () => const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.all(TvSpacing.xl),
-                    child: Center(
-                      child: SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(TvSpacing.xl),
+                  child: Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     ),
                   ),
                 ),
-                error: (_, __) => SliverToBoxAdapter(child: _errorState()),
+                error: (_, __) => _errorState(),
                 data: (projects) {
-                  if (projects.isEmpty) {
-                    return SliverToBoxAdapter(child: _emptyState());
-                  }
-                  return SliverPadding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: TvSpacing.md,
-                    ),
-                    sliver: SliverGrid(
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            mainAxisSpacing: TvSpacing.sm,
-                            crossAxisSpacing: TvSpacing.sm,
-                            childAspectRatio: 0.92,
-                          ),
-                      delegate: SliverChildBuilderDelegate(
-                        (_, i) => _ProjectCard(project: projects[i], index: i),
-                        childCount: projects.length,
-                      ),
-                    ),
-                  );
+                  if (projects.isEmpty) return _emptyState();
+                  return _grid(projects);
                 },
               ),
-
-              const SliverToBoxAdapter(child: SizedBox(height: 120)),
             ],
           ),
         ),
@@ -193,86 +278,129 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
     );
   }
 
-  Widget _emptyState() {
-    return Padding(
-      padding: const EdgeInsets.all(TvSpacing.md),
-      child: Container(
-        padding: const EdgeInsets.all(TvSpacing.xl),
-        decoration: BoxDecoration(
-          color: context.surface,
-          borderRadius: BorderRadius.circular(TvRadius.xl),
+  Widget _header() {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'پروژه‌ها',
+                style: TvTypography.headline.copyWith(
+                  color: context.ink,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'هر پروژه، یک باغچه در باغ بزرگ‌تر توست.',
+                style: TvTypography.bodySmall.copyWith(color: context.inkSoft),
+              ),
+            ],
+          ),
         ),
-        child: Column(
-          children: [
-            Container(
-              width: 88,
-              height: 88,
-              decoration: BoxDecoration(
-                color: context.brandSoft,
-                borderRadius: BorderRadius.circular(28),
-              ),
-              child: Icon(
-                Icons.layers_outlined,
-                size: 40,
-                color: context.brand,
-              ),
+        Material(
+          color: context.brand,
+          borderRadius: BorderRadius.circular(TvRadius.full),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(TvRadius.full),
+            onTap: _createProject,
+            child: const Padding(
+              padding: EdgeInsets.all(12),
+              child: Icon(Icons.add_rounded, color: Colors.white, size: 22),
             ),
-            const SizedBox(height: TvSpacing.md),
-            Text(
-              'هنوز پروژه‌ای نداری',
-              style: TvTypography.title.copyWith(
-                color: context.ink,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: TvSpacing.xs),
-            Text(
-              'پروژه‌ها به تو کمک می‌کنن تسک‌های مرتبط رو یه‌جا ببینی.',
-              textAlign: TextAlign.center,
-              style: TvTypography.bodySmall.copyWith(color: context.inkSoft),
-            ),
-            const SizedBox(height: TvSpacing.lg),
-            TvButton(
-              label: 'ساخت اولین پروژه',
-              icon: Icons.add_rounded,
-              onPressed: _createProject,
-            ),
-          ],
+          ),
         ),
-      ).animate().fadeIn(duration: 500.ms),
+      ],
+    ).animate().fadeIn(duration: 400.ms);
+  }
+
+  Widget _grid(List<Project> projects) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: projects.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: TvSpacing.sm,
+        crossAxisSpacing: TvSpacing.sm,
+        childAspectRatio: 0.92,
+      ),
+      itemBuilder: (_, i) => _ProjectCard(project: projects[i], index: i),
     );
   }
 
+  Widget _emptyState() {
+    return Container(
+      padding: const EdgeInsets.all(TvSpacing.xl),
+      decoration: BoxDecoration(
+        color: context.surface,
+        borderRadius: BorderRadius.circular(TvRadius.xl),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 88,
+            height: 88,
+            decoration: BoxDecoration(
+              color: context.brandSoft,
+              borderRadius: BorderRadius.circular(28),
+            ),
+            child: Icon(Icons.layers_outlined, size: 40, color: context.brand),
+          ),
+          const SizedBox(height: TvSpacing.md),
+          Text(
+            'هنوز پروژه‌ای نداری',
+            style: TvTypography.title.copyWith(
+              color: context.ink,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: TvSpacing.xs),
+          Text(
+            'پروژه‌ها به تو کمک می‌کنن تسک‌های مرتبط رو یه‌جا ببینی.',
+            textAlign: TextAlign.center,
+            style: TvTypography.bodySmall.copyWith(color: context.inkSoft),
+          ),
+          const SizedBox(height: TvSpacing.lg),
+          TvButton(
+            label: 'ساخت اولین پروژه',
+            icon: Icons.add_rounded,
+            onPressed: _createProject,
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 500.ms);
+  }
+
   Widget _errorState() {
-    return Padding(
-      padding: const EdgeInsets.all(TvSpacing.md),
-      child: Container(
-        padding: const EdgeInsets.all(TvSpacing.xl),
-        decoration: BoxDecoration(
-          color: context.surface,
-          borderRadius: BorderRadius.circular(TvRadius.xl),
-        ),
-        child: Column(
-          children: [
-            Icon(Icons.cloud_off_rounded, size: 40, color: context.inkSoft),
-            const SizedBox(height: TvSpacing.md),
-            Text(
-              'ارتباط برقرار نشد',
-              style: TvTypography.title.copyWith(
-                color: context.ink,
-                fontWeight: FontWeight.w700,
-              ),
+    return Container(
+      padding: const EdgeInsets.all(TvSpacing.xl),
+      decoration: BoxDecoration(
+        color: context.surface,
+        borderRadius: BorderRadius.circular(TvRadius.xl),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.cloud_off_rounded, size: 40, color: context.inkSoft),
+          const SizedBox(height: TvSpacing.md),
+          Text(
+            'ارتباط برقرار نشد',
+            style: TvTypography.title.copyWith(
+              color: context.ink,
+              fontWeight: FontWeight.w700,
             ),
-            const SizedBox(height: TvSpacing.lg),
-            TvButton(
-              label: 'تلاش دوباره',
-              icon: Icons.refresh_rounded,
-              variant: TvButtonVariant.secondary,
-              expand: false,
-              onPressed: () => ref.invalidate(projectsProvider),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: TvSpacing.lg),
+          TvButton(
+            label: 'تلاش دوباره',
+            icon: Icons.refresh_rounded,
+            variant: TvButtonVariant.secondary,
+            expand: false,
+            onPressed: () => ref.invalidate(projectsProvider),
+          ),
+        ],
       ),
     );
   }
@@ -286,7 +414,6 @@ class _ProjectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Two-tone gradient per index (cycles through 4 combos).
     final brand = context.brand;
     final accent = context.accent;
     final brandDeep = context.brandDeep;
