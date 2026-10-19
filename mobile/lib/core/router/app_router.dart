@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -15,7 +14,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     redirect: (context, state) {
       final auth = ref.read(authProvider);
-      final loggingIn = state.matchedLocation == '/login' ||
+      final loggingIn =
+          state.matchedLocation == '/login' ||
           state.matchedLocation == '/otp' ||
           state.matchedLocation == '/';
 

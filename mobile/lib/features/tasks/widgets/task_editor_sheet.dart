@@ -593,7 +593,7 @@ class _TaskEditorSheetState extends State<TaskEditorSheet> {
                   ),
                 ),
                 items: [
-                  DropdownMenuItem<int?>(
+                  const DropdownMenuItem<int?>(
                     value: null,
                     child: Text('بدون پروژه', style: TvTypography.bodySmall),
                   ),

@@ -17,7 +17,7 @@ class AuthApi {
     required String phone,
     required String name,
   }) async {
-    final url = '${ApiConfig.baseUrl}${ApiConfig.register}';
+    const url = '${ApiConfig.baseUrl}${ApiConfig.register}';
     if (kDebugMode) debugPrint('=== AUTH_API: POST $url ===');
     try {
       final r = await _dio.post(
@@ -40,7 +40,7 @@ class AuthApi {
     required String password,
     required String name,
   }) async {
-    final url = '${ApiConfig.baseUrl}${ApiConfig.verifyOtp}';
+    const url = '${ApiConfig.baseUrl}${ApiConfig.verifyOtp}';
     if (kDebugMode) debugPrint('=== AUTH_API: POST $url ===');
     try {
       final r = await _dio.post(
@@ -66,14 +66,13 @@ class AuthApi {
     }
   }
 
-  Future<User> login({
-    required String phone,
-    required String password,
-  }) async {
-    final url = '${ApiConfig.baseUrl}${ApiConfig.login}';
+  Future<User> login({required String phone, required String password}) async {
+    const url = '${ApiConfig.baseUrl}${ApiConfig.login}';
     if (kDebugMode) {
       debugPrint('=== AUTH_API: POST $url ===');
-      debugPrint('=== AUTH_API: body phone=$phone passLen=${password.length} ===');
+      debugPrint(
+        '=== AUTH_API: body phone=$phone passLen=${password.length} ===',
+      );
     }
     try {
       final r = await _dio.post(

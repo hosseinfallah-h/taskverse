@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 /// TaskVerse — Garden at Dawn
@@ -86,50 +85,38 @@ abstract final class TvColors {
   }
 
   /// Elevated card, dialog, or sheet surface.
-  static Color elevatedSurface(
-    Brightness brightness, {
-    bool isAmoled = false,
-  }) {
+  static Color elevatedSurface(Brightness brightness, {bool isAmoled = false}) {
     if (isAmoled) return nightElevated;
 
     return brightness == Brightness.light ? cloud : nightElevated;
   }
 
   /// Primary readable text.
-  static Color primaryText(
-    Brightness brightness, {
-    bool isAmoled = false,
-  }) {
+  static Color primaryText(Brightness brightness, {bool isAmoled = false}) {
     if (brightness == Brightness.light) return ink;
 
-    return isAmoled ? cloud : Color(0xFFF0F4F1);
+    return isAmoled ? cloud : const Color(0xFFF0F4F1);
   }
 
   /// Secondary readable text.
-  static Color secondaryText(
-    Brightness brightness, {
-    bool isAmoled = false,
-  }) {
+  static Color secondaryText(Brightness brightness, {bool isAmoled = false}) {
     if (brightness == Brightness.light) return inkSoft;
 
-    return isAmoled ? Color(0xFFB0BBB5) : Color(0xFFABB7B0);
+    return isAmoled ? const Color(0xFFB0BBB5) : const Color(0xFFABB7B0);
   }
 
   /// Subtle borders and dividers.
   static Color outline(Brightness brightness, {bool isAmoled = false}) {
     if (brightness == Brightness.light) return sandDeep;
 
-    return isAmoled ? Color(0xFF292F2C) : Color(0xFF303A35);
+    return isAmoled ? const Color(0xFF292F2C) : const Color(0xFF303A35);
   }
 
   /// Low-emphasis disabled content.
-  static Color disabledContent(
-    Brightness brightness, {
-    bool isAmoled = false,
-  }) {
+  static Color disabledContent(Brightness brightness, {bool isAmoled = false}) {
     if (brightness == Brightness.light) return inkMuted;
 
-    return isAmoled ? Color(0xFF666D69) : Color(0xFF737E77);
+    return isAmoled ? const Color(0xFF666D69) : const Color(0xFF737E77);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -140,11 +127,7 @@ abstract final class TvColors {
   static const LinearGradient dawnGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [
-      Color(0xFFFBEEF5),
-      Color(0xFFE5F5EE),
-      Color(0xFFF5F1EA),
-    ],
+    colors: [Color(0xFFFBEEF5), Color(0xFFE5F5EE), Color(0xFFF5F1EA)],
     stops: [0.0, 0.5, 1.0],
   );
 
@@ -166,10 +149,7 @@ abstract final class TvColors {
   static const LinearGradient headerGradientLight = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [
-      Color(0xFFFBEEF5),
-      Color(0xFFF5F1EA),
-    ],
+    colors: [Color(0xFFFBEEF5), Color(0xFFF5F1EA)],
   );
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -212,35 +192,19 @@ abstract final class TvColors {
   // ─────────────────────────────────────────────────────────────────────────
 
   static const List<BoxShadow> cardGlow = [
-    BoxShadow(
-      color: Color(0x0D0F5132),
-      blurRadius: 24,
-      offset: Offset(0, 8),
-    ),
+    BoxShadow(color: Color(0x0D0F5132), blurRadius: 24, offset: Offset(0, 8)),
   ];
 
   static const List<BoxShadow> mintGlow = [
-    BoxShadow(
-      color: Color(0x5200C896),
-      blurRadius: 32,
-      offset: Offset(0, 12),
-    ),
+    BoxShadow(color: Color(0x5200C896), blurRadius: 32, offset: Offset(0, 12)),
   ];
 
   static const List<BoxShadow> goldGlow = [
-    BoxShadow(
-      color: Color(0x4DF2B33D),
-      blurRadius: 28,
-      offset: Offset(0, 10),
-    ),
+    BoxShadow(color: Color(0x4DF2B33D), blurRadius: 28, offset: Offset(0, 10)),
   ];
 
   static const List<BoxShadow> floatingShadow = [
-    BoxShadow(
-      color: Color(0x1A0F5132),
-      blurRadius: 40,
-      offset: Offset(0, 16),
-    ),
+    BoxShadow(color: Color(0x1A0F5132), blurRadius: 40, offset: Offset(0, 16)),
   ];
 
   // ─────────────────────────────────────────────────────────────────────────
